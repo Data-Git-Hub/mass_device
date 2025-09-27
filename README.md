@@ -186,8 +186,73 @@ cp .env.example .env
 # Edit .env with your keys, location, and Kafka bootstrap servers.
 ```
 
+# 4) Running in WSL (Windows Subsystem for Linux)
+** Note - You can also run the M.A.S.S. Device inside WSL2 for a native Linux experience while still working in Windows. This is especially useful for developers who want closer compatibility with Linux servers or Dockerized environments.
 
-# 4) Run Producer (Terminal One (1))
+
+     1) Verify your WSL installation
+```shell
+wsl --install
+wsl --update
+wsl --version
+```
+** Note - Make sure you are on WSL version 2 and have a Linux distribution (e.g., Ubuntu 22.04) installed. **
+
+
+    2) Update Linux packages
+    - Open your WSL terminal (e.g., Ubuntu) and update:
+    - 
+```bash
+sudo apt update && sudo apt upgrade -y
+```
+
+    3) Install Python 3.11
+    - Most new WSL distros include Python 3.10 by default. Add the deadsnakes PPA for Python 3.11
+```bash
+sudo apt install -y software-properties-common
+sudo add-apt-repository ppa:deadsnakes/ppa -y
+sudo apt update
+sudo apt install -y python3.11 python3.11-venv python3.11-dev python3-pip
+```
+
+** Make sure Python 3.11 is the default in your shell. **
+
+```shell
+python3.11 -V
+```
+
+    4) Create & Activate the Virtual Environment
+```bash
+python3.11 -m venv .venv
+source .venv/bin/activate
+```
+
+    5) Upgrade pip & Install Dependencies
+```bash
+python -m pip install --upgrade pip setuptools wheel
+pip install -r requirements.txt
+```
+
+    6) Configure Environment
+    - Copy your environment template and edit values:
+```bash
+cp .env.example .env
+nano .env   # or use code .env if VS Code is connected to WSL
+```
+
+    7) Run Producer
+```bash
+python -m producers.weather_producer
+```
+
+    8) Run Consumer
+```bash
+python -m consumers.weather_consumer
+```
+
+** Note - In separate terminals (both with venv active): **
+
+# 5) Run Producer (Terminal One (1))
 
 # Windows/macOS/Linux
 ```bash
@@ -195,7 +260,7 @@ python -m producers.weather_producer
 ```
 
 
-# 5) Run Consumer (Terminal Two (2))
+# 6) Run Consumer (Terminal Two (2))
 
 # Windows/macOS/Linux
 ```bash
@@ -220,6 +285,7 @@ Contributors names and contact info <br>
 
 
 ## Version History
+- P6 Init 0.5 | Modify README.md
 - P6 Init 0.4 | Added folders named: consumers, data, logs, producers - Added files: mass_device_alerts.py, mass_device_consumer.py, mass_device_producer.py, kafka_io.py, rolling_stats.py, utils_env.py, utils_logger.py; Modify README.md 
 - P6 Init 0.3 | Modify README.md - Added Introduction
 - P6 Init 0.2 | Modify README.md
