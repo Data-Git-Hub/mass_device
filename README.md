@@ -220,6 +220,7 @@ Contributors names and contact info <br>
 
 
 ## Version History
+- P6 Init 0.4 | Added folders named: consumers, data, logs, producers - Added files: mass_device_alerts.py, mass_device_consumer.py, mass_device_producer.py, kafka_io.py, rolling_stats.py, utils_env.py, utils_logger.py; Modify README.md 
 - P6 Init 0.3 | Modify README.md - Added Introduction
 - P6 Init 0.2 | Modify README.md
 - P6 Init     | Add requirements.txt, pyproject.toml, setup.cfg; Modify .gitignore, README.md
