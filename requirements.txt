@@ -1,0 +1,37 @@
+# Core Kafka client for Python; simple to install on Windows/macOS/Linux.
+# Used by producers/consumers to publish/subscribe to the weather topic.
+kafka-python~=2.0
+
+# Lightweight HTTP client for polling free weather APIs (e.g., Open-Meteo, NOAA).
+# Producer uses this to fetch observations at a fixed cadence.
+requests~=2.32
+
+# Loads environment variables from a .env file (API base URL, Kafka servers, alert settings).
+# Keeps secrets/config out of code and supports local dev ergonomics.
+python-dotenv~=1.0
+
+# Real-time/animated charts for the consumer dashboard (FuncAnimation).
+# 3.9 works well on Python 3.11 across platforms.
+matplotlib~=3.9
+
+# Fast numerical arrays used by rolling stats (z-scores, EWMA, CUSUM).
+# Ensures stable, vectorized calculations in the consumer.
+numpy~=2.1
+
+# Tabular utilities for optional buffering, resampling, and exploratory logging.
+# Helpful for converting JSON messages to frames during debugging.
+pandas~=2.2
+
+# Runtime data validation for producer message schema (types, bounds, units).
+# Helps keep messages consistent and catch bad inputs early.
+pydantic~=2.9
+
+# --------------------------------------------------------------------
+# Optional alternatives / add-ons (uncomment if needed)
+# --------------------------------------------------------------------
+# confluent-kafka==2.*        # Faster C client bindings; requires system librdkafka.
+# rich~=13.7                  # Pretty console logging/progress for producer/consumer.
+# pytest~=8.3                 # If you add tests/ for rolling_stats and utils.
+# mypy~=1.11                  # Static typing checks if you annotate modules.
+# ruff~=0.6                   # Fast linting/formatting (or use black).
+
