@@ -7,9 +7,24 @@ The M.A.S.S. Device is a real-time streaming pipeline that ingests live weather 
 
 
 ## Introduction
+The M.A.S.S. (Meteorological Analytics Streaming System) Device is designed to demonstrate how real-time data streaming and analytics can provide meaningful insights into rapidly changing atmospheric conditions. Weather data, such as temperature, barometric pressure, precipitation, and wind speed, are not only essential for everyday decision-making but also play a critical role in identifying the onset of severe weather events. Streaming pipelines are especially useful in this context because weather processes are dynamic, nonstationary, and require near real-time monitoring to support actionable insights (Allen, Tippett, & Sobel, 2014; McBean, 2011).
+
+At its core, the M.A.S.S. Device combines modern data engineering techniques with time-series analytics. The pipeline ingests live weather data from free APIs, normalizes the messages into a consistent JSON schema, and streams them through Kafka to ensure scalability and resilience. The consumer applies rolling statistical methods such as exponentially weighted moving averages (EWMA), z-scores, and cumulative sum (CUSUM) to detect anomalies. These techniques are widely recommended for anomaly detection in continuous streams because they adapt to variability and identify both abrupt changes and gradual drifts (Chandola, Banerjee, & Kumar, 2009; Page, 1954; Roberts, 1959).
+
+Visualization and interpretability are key to the project’s design. The consumer dynamically renders animated Matplotlib charts that highlight trends and anomalies in weather variables, making complex data streams accessible and understandable. This reflects broader practices in meteorology, where visualization is an indispensable tool for interpreting atmospheric variability and forecasting extreme events (Doswell, 2015). Beyond visualization, the system also includes optional alerting capabilities, sending email or SMS notifications when significant changes occur, such as sharp drops in pressure or unusually high wind gusts. Such features parallel real-world early-warning systems, which are crucial for protecting lives and infrastructure during severe weather (Allen et al., 2014; McBean, 2011).
+
+Ultimately, this project is not just about implementing a streaming system but about demonstrating how data analytics can be applied meaningfully to meteorology. By focusing on interpretability, adaptability, and clarity, the M.A.S.S. Device illustrates the power of analytics in domains where timely and accurate information is essential for decision-making.
+
+### References:
+Allen, J. T., Tippett, M. K., & Sobel, A. H. (2014). An empirical model relating U.S. monthly hail occurrence to large-scale meteorological environment. Journal of Advances in Modeling Earth Systems, 7(1), 226–243. https://doi.org/10.1002/2014MS000397
+Chandola, V., Banerjee, A., & Kumar, V. (2009). Anomaly detection: A survey. ACM Computing Surveys, 41(3), 1–58. https://doi.org/10.1145/1541880.1541882
+Doswell, C. A. (2015). Severe convective storms—An overview. Meteorological Monographs, 55(1), 1.1–1.26. https://doi.org/10.1175/AMSMONOGRAPHS-D-15-0001.1
+McBean, G. (2011). Climate change and extreme weather: Designing for adaptation. Philosophical Transactions of the Royal Society A: Mathematical, Physical and Engineering Sciences, 369(1956), 1784–1802. https://doi.org/10.1098/rsta.2010.0370
+Page, E. S. (1954). Continuous inspection schemes. Biometrika, 41(1/2), 100–115. https://doi.org/10.1093/biomet/41.1-2.100
+Roberts, S. W. (1959). Control chart tests based on geometric moving averages. Technometrics, 1(3), 239–250. https://doi.org/10.1080/00401706.1959.10489860
 
 
-### Features
+## Features
 - Python producer polls a free weather API and publishes normalized JSON to Kafka.
 - Python consumer maintains rolling windows, detects anomalies, and animates charts.
 - Optional email/SMS alerts (pressure drops, wind gust thresholds, rapid change).
@@ -205,6 +220,7 @@ Contributors names and contact info <br>
 
 
 ## Version History
+- P6 Init 0.3 | Modify README.md - Added Introduction
 - P6 Init 0.2 | Modify README.md
 - P6 Init     | Add requirements.txt, pyproject.toml, setup.cfg; Modify .gitignore, README.md
 
