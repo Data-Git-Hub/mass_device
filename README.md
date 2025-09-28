@@ -5,24 +5,40 @@ The M.A.S.S. Device is a real-time streaming pipeline that ingests live weather 
 
 **Short tagline:** Real-time weather analytics & anomaly detection—live.
 
+---
+
+This README.md is the central documentation for the M.A.S.S. Device. It introduces the custom weather-streaming pipeline, describes how messages are ingested, processed, and visualized, and provides clear setup/run instructions.
+
+- Purpose: Demonstrate real-time analytics on streaming meteorological data using Kafka and Python. <br>
+- Message flow: Producers emit JSON weather messages, consumers apply rolling statistics (z-scores, EWMA, CUSUM), and anomalies are visualized with Matplotlib animation. <br>
+- Run instructions: Included under Quickstart with explicit steps for Windows, macOS/Linux, and WSL. <br>
+- Visualization: Dynamic anomaly detection plots make it clear when significant changes occur (e.g., sudden pressure drops). <br>
+- Logging: Both producers and consumers will integrate with utils_logger.py so events, anomalies, and errors are tracked in logs/. <br>
+- Verification: To finalize, include a screenshot of the animated chart (e.g., saved under assets/) and commit it with your submission. <br>
+
+** Note - This ensures the README.md is a living guide: not just for setup but also for interpretation of the insights and the analytics choices that make this project unique. ** <br>
+
+
+---
 
 ## Introduction
-The M.A.S.S. (Meteorological Analytics Streaming System) Device is designed to demonstrate how real-time data streaming and analytics can provide meaningful insights into rapidly changing atmospheric conditions. Weather data, such as temperature, barometric pressure, precipitation, and wind speed, are not only essential for everyday decision-making but also play a critical role in identifying the onset of severe weather events. Streaming pipelines are especially useful in this context because weather processes are dynamic, nonstationary, and require near real-time monitoring to support actionable insights (Allen, Tippett, & Sobel, 2014; McBean, 2011).
+The M.A.S.S. (Meteorological Analytics Streaming System) Device is designed to demonstrate how real-time data streaming and analytics can provide meaningful insights into rapidly changing atmospheric conditions. Weather data, such as temperature, barometric pressure, precipitation, and wind speed, are not only essential for everyday decision-making but also play a critical role in identifying the onset of severe weather events. Streaming pipelines are especially useful in this context because weather processes are dynamic, nonstationary, and require near real-time monitoring to support actionable insights (Allen, Tippett, & Sobel, 2014; McBean, 2011). <br>
 
-At its core, the M.A.S.S. Device combines modern data engineering techniques with time-series analytics. The pipeline ingests live weather data from free APIs, normalizes the messages into a consistent JSON schema, and streams them through Kafka to ensure scalability and resilience. The consumer applies rolling statistical methods such as exponentially weighted moving averages (EWMA), z-scores, and cumulative sum (CUSUM) to detect anomalies. These techniques are widely recommended for anomaly detection in continuous streams because they adapt to variability and identify both abrupt changes and gradual drifts (Chandola, Banerjee, & Kumar, 2009; Page, 1954; Roberts, 1959).
+At its core, the M.A.S.S. Device combines modern data engineering techniques with time-series analytics. The pipeline ingests live weather data from free APIs, normalizes the messages into a consistent JSON schema, and streams them through Kafka to ensure scalability and resilience. The consumer applies rolling statistical methods such as exponentially weighted moving averages (EWMA), z-scores, and cumulative sum (CUSUM) to detect anomalies. These techniques are widely recommended for anomaly detection in continuous streams because they adapt to variability and identify both abrupt changes and gradual drifts (Chandola, Banerjee, & Kumar, 2009; Page, 1954; Roberts, 1959). <br>
 
-Visualization and interpretability are key to the project’s design. The consumer dynamically renders animated Matplotlib charts that highlight trends and anomalies in weather variables, making complex data streams accessible and understandable. This reflects broader practices in meteorology, where visualization is an indispensable tool for interpreting atmospheric variability and forecasting extreme events (Doswell, 2015). Beyond visualization, the system also includes optional alerting capabilities, sending email or SMS notifications when significant changes occur, such as sharp drops in pressure or unusually high wind gusts. Such features parallel real-world early-warning systems, which are crucial for protecting lives and infrastructure during severe weather (Allen et al., 2014; McBean, 2011).
+Visualization and interpretability are key to the project’s design. The consumer dynamically renders animated Matplotlib charts that highlight trends and anomalies in weather variables, making complex data streams accessible and understandable. This reflects broader practices in meteorology, where visualization is an indispensable tool for interpreting atmospheric variability and forecasting extreme events (Doswell, 2015). Beyond visualization, the system also includes optional alerting capabilities, sending email or SMS notifications when significant changes occur, such as sharp drops in pressure or unusually high wind gusts. Such features parallel real-world early-warning systems, which are crucial for protecting lives and infrastructure during severe weather (Allen et al., 2014; McBean, 2011). <br>
 
-Ultimately, this project is not just about implementing a streaming system but about demonstrating how data analytics can be applied meaningfully to meteorology. By focusing on interpretability, adaptability, and clarity, the M.A.S.S. Device illustrates the power of analytics in domains where timely and accurate information is essential for decision-making.
+Ultimately, this project is not just about implementing a streaming system but about demonstrating how data analytics can be applied meaningfully to meteorology. By focusing on interpretability, adaptability, and clarity, the M.A.S.S. Device illustrates the power of analytics in domains where timely and accurate information is essential for decision-making. <br>
 
 ### References:
-<br> Allen, J. T., Tippett, M. K., & Sobel, A. H. (2014). An empirical model relating U.S. monthly hail occurrence to large-scale meteorological environment. Journal of Advances in Modeling Earth Systems, 7(1), 226–243. https://doi.org/10.1002/2014MS000397 <br/>
-<br> Chandola, V., Banerjee, A., & Kumar, V. (2009). Anomaly detection: A survey. ACM Computing Surveys, 41(3), 1–58. https://doi.org/10.1145/1541880.1541882 <br/>
-<br> Doswell, C. A. (2015). Severe convective storms—An overview. Meteorological Monographs, 55(1), 1.1–1.26. https://doi.org/10.1175/AMSMONOGRAPHS-D-15-0001.1 <br/>
-<br> McBean, G. (2011). Climate change and extreme weather: Designing for adaptation. Philosophical Transactions of the Royal Society A: Mathematical, Physical and Engineering Sciences, 369(1956), 1784–1802. https://doi.org/10.1098/rsta.2010.0370 <br/>
-<br> Page, E. S. (1954). Continuous inspection schemes. Biometrika, 41(1/2), 100–115. https://doi.org/10.1093/biomet/41.1-2.100 <br/>
-<br> Roberts, S. W. (1959). Control chart tests based on geometric moving averages. Technometrics, 1(3), 239–250. https://doi.org/10.1080/00401706.1959.10489860 <br/>
+Allen, J. T., Tippett, M. K., & Sobel, A. H. (2014). An empirical model relating U.S. monthly hail occurrence to large-scale meteorological environment. Journal of Advances in Modeling Earth Systems, 7(1), 226–243. https://doi.org/10.1002/2014MS000397 <br>
+Chandola, V., Banerjee, A., & Kumar, V. (2009). Anomaly detection: A survey. ACM Computing Surveys, 41(3), 1–58. https://doi.org/10.1145/1541880.1541882 <br>
+Doswell, C. A. (2015). Severe convective storms—An overview. Meteorological Monographs, 55(1), 1.1–1.26. https://doi.org/10.1175/AMSMONOGRAPHS-D-15-0001.1 <br>
+McBean, G. (2011). Climate change and extreme weather: Designing for adaptation. Philosophical Transactions of the Royal Society A: Mathematical, Physical and Engineering Sciences, 369(1956), 1784–1802. https://doi.org/10.1098/rsta.2010.0370 <br>
+Page, E. S. (1954). Continuous inspection schemes. Biometrika, 41(1/2), 100–115. https://doi.org/10.1093/biomet/41.1-2.100 <br>
+Roberts, S. W. (1959). Control chart tests based on geometric moving averages. Technometrics, 1(3), 239–250. https://doi.org/10.1080/00401706.1959.10489860 <br>
 
+---
 
 ## Features
 - Python producer polls a free weather API and publishes normalized JSON to Kafka.
@@ -30,6 +46,7 @@ Ultimately, this project is not just about implementing a streaming system but a
 - Optional email/SMS alerts (pressure drops, wind gust thresholds, rapid change).
 - Clear env configuration; simple, reproducible repo structure.
 
+---
 
 ## Project Structure
 
@@ -45,6 +62,7 @@ mass_device/
 |  - .gitignore
 |  - LICENSE
 
+---
 
 ## Requirements
 
@@ -62,6 +80,7 @@ mass_device/
   - Optional alerts: `ALERTS_ENABLED`, `ALERT_PRESSURE_DROP_HPA`, `ALERT_WIND_GUST_MPS`, `ALERT_COOLDOWN_MIN`
   - Optional email/SMS: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `ALERT_EMAIL_TO`, `ALERT_EMAIL_FROM`, and/or SMS gateway/API keys
 
+---
 
 ### Recommended tooling
 
@@ -119,6 +138,7 @@ print("Missing:", missing if missing else "None")
 PY
 ```
 
+---
 
 ## Tasks
 1. Clone / open the project in VS Code.
@@ -127,6 +147,8 @@ PY
 4. Create .env and set API_KEY=... (keep it off GitHub).
 5. Run the consumer and verify the live chart updates.
 6. Commit & push your changes, include a screenshot for submission.
+
+---
 
 ## Quickstart
 
@@ -250,7 +272,6 @@ mv kafka_2.13-3.9.1 kafka
 ```
 
 
-
   ###  8) Run Kafka
 ```bash
 # Start Kafka
@@ -288,14 +309,27 @@ python -m producers.weather_producer
 python -m consumers.weather_consumer
 ```
 
+---
 
 ## API Key Hygiene (don’t commit secrets)
 - Store the key in .env (and/or secrets/), both are git-ignored.
 - Never hard-code your key in .py files.
 - If you rotate keys, just update .env.
 
+---
 
 ## Troubleshooting
+- Venv sanity: 
+```bash
+python -V, where python (Windows) / which python (WSL)
+```
+
+- Kafka sanity: 
+```shell
+kafka-topics.(bat|sh) --list --bootstrap-server localhost:9092
+```
+
+---
 
 ## Authors
 
@@ -304,8 +338,9 @@ Contributors names and contact info <br>
 
 ---
 
-
 ## Version History
+- P6 Main 2.1 | Modify README.md
+- P6 Main 2.0 | Modify README.md
 - P6 Main 1.2 | Modify README.md
 - P6 Main 1.1 | Modify README.md
 - P6 Main 1.0 | Add demo_mass_device_consumer.py, demo_mass_device_producer.py; Modify README.md
