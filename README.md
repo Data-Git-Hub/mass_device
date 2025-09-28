@@ -190,7 +190,7 @@ cp .env.example .env
 ** Note - You can also run the M.A.S.S. Device inside WSL2 for a native Linux experience while still working in Windows. This is especially useful for developers who want closer compatibility with Linux servers or Dockerized environments.
 
 
-     1) Verify your WSL installation
+  ###  1) Verify your WSL installation
 ```shell
 wsl --install
 wsl --update
@@ -199,14 +199,14 @@ wsl --version
 ** Note - Make sure you are on WSL version 2 and have a Linux distribution (e.g., Ubuntu 22.04) installed. **
 
 
-    2) Update Linux packages
+  ###  2) Update Linux packages
     - Open your WSL terminal (e.g., Ubuntu) and update:
     - 
 ```bash
 sudo apt update && sudo apt upgrade -y
 ```
 
-    3) Install Python 3.11
+  ###  3) Install Python 3.11
     - Most new WSL distros include Python 3.10 by default. Add the deadsnakes PPA for Python 3.11
 ```bash
 sudo apt install -y software-properties-common
@@ -221,33 +221,53 @@ sudo apt install -y python3.11 python3.11-venv python3.11-dev python3-pip
 python3.11 -V
 ```
 
-    4) Create & Activate the Virtual Environment
+  ###  4) Create & Activate the Virtual Environment
 ```bash
 python3.11 -m venv .venv
 source .venv/bin/activate
 ```
 
-    5) Upgrade pip & Install Dependencies
+  ###  5) Upgrade pip & Install Dependencies
 ```bash
 python -m pip install --upgrade pip setuptools wheel
 pip install -r requirements.txt
 ```
 
-    6) Configure Environment
+  ###  6) Configure Environment
     - Copy your environment template and edit values:
 ```bash
 cp .env.example .env
 nano .env   # or use code .env if VS Code is connected to WSL
 ```
 
-    7) Run Producer
+  ###  7) Install Kafka
+  - In WSL terminal:
 ```bash
-python -m producers.weather_producer
+cd ~
+wget https://downloads.apache.org/kafka/3.9.1/kafka_2.13-3.9.1.tgz
+tar -xzf kafka_2.13-3.9.1.tgz
+mv kafka_2.13-3.9.1 kafka
 ```
 
-    8) Run Consumer
+
+
+  ###  8) Run Kafka
 ```bash
-python -m consumers.weather_consumer
+# Start Kafka
+kafka-server-start.sh config/kraft/server.properties
+# Or on Windows:
+kafka-server-start.bat config\kraft\server.properties
+```
+
+
+  ###  9) Run Producer
+```bash
+python -m producers.demo_mass_device_producer
+```
+
+  ### 10) Run Consumer
+```bash
+python -m consumers.demo_mass_device_consumer
 ```
 
 ** Note - In separate terminals (both with venv active): **
@@ -285,6 +305,7 @@ Contributors names and contact info <br>
 
 
 ## Version History
+- P6 Main 1.0 | Add demo_mass_device_consumer.py, demo_mass_device_producer.py; Modify README.md
 - P6 Init 0.5 | Modify README.md
 - P6 Init 0.4 | Added folders named: consumers, data, logs, producers - Added files: mass_device_alerts.py, mass_device_consumer.py, mass_device_producer.py, kafka_io.py, rolling_stats.py, utils_env.py, utils_logger.py; Modify README.md 
 - P6 Init 0.3 | Modify README.md - Added Introduction
