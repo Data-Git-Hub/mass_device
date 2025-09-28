@@ -58,6 +58,7 @@ mass_device/ <br>
 |   | - mass_device_consumer.py <br>
 | - data/ <br>
 |  | - demo_stream.josnl <br>
+|  | - image
 | - logs/ <br>
 | - producers/ <br>
 |   | - demo_mass_device_producer.py <br>
@@ -359,6 +360,7 @@ Contributors names and contact info <br>
 ---
 
 ## Version History
+- P6 Main 2.4 | Modify mass_device.py, mass_device_consumer - copied demo over to use as base, mass_device_alerts - made some basic alerts, kafka.io.py, rolling_stats.py, utils_env.py, util_logger.py, README.md
 - P6 Main 2.3 | Add image folder - for adding images to the README.md; Modify README.md - Formatting
 - P6 Main 2.2 | Modify README.md - updated Project Structure
 - P6 Main 2.1 | Modify README.md
