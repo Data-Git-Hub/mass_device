@@ -50,17 +50,29 @@ Roberts, S. W. (1959). Control chart tests based on geometric moving averages. T
 
 ## Project Structure
 
-mass_device/
-|  - producers/
-|  - consumers/
-|  - utils/
-|  - data/
-|  - logs/
-|  - README.md
-|  - requirements.txt
-|  - .env.example
-|  - .gitignore
-|  - LICENSE
+mass_device/ <br>
+| - consumers/ <br>
+|   | - demo_mass_device_consumer.py <br>
+|   | - mass_device_alerts.py <br>
+|   | - mass_device_consumer.py <br>
+| - data/ <br>
+|  | - demo_stream.josnl <br>
+| - logs/ <br>
+| - producers/ <br>
+|   | - demo_mass_device_producer.py <br>
+|   | - mass_device_producer.py
+| - utils/ <br>
+|   | - kafka.io.py
+|   | - rolling_stats.py
+|   | - utils_env.py
+|   | - utils_logger.py
+| - .env.example <br>
+| - .gitignore <br>
+| - LICENSE <br>
+| - pyproject.toml <br>
+| - README.md <br>
+| - requirements.txt <br>
+| - setup.cfg <br>
 
 ---
 
@@ -208,11 +220,12 @@ cp .env.example .env
 # Edit .env with your keys, location, and Kafka bootstrap servers.
 ```
 
+
 # 4) Running in WSL (Windows Subsystem for Linux)
 ** Note - You can also run the M.A.S.S. Device inside WSL2 for a native Linux experience while still working in Windows. This is especially useful for developers who want closer compatibility with Linux servers or Dockerized environments.
 
 
-  ###  1) Verify your WSL installation
+###  1) Verify your WSL installation
 ```shell
 wsl --install
 wsl --update
@@ -221,14 +234,15 @@ wsl --version
 ** Note - Make sure you are on WSL version 2 and have a Linux distribution (e.g., Ubuntu 22.04) installed. **
 
 
-  ###  2) Update Linux packages
+###  2) Update Linux packages
     - Open your WSL terminal (e.g., Ubuntu) and update:
     - 
 ```bash
 sudo apt update && sudo apt upgrade -y
 ```
 
-  ###  3) Install Python 3.11
+
+###  3) Install Python 3.11
     - Most new WSL distros include Python 3.10 by default. Add the deadsnakes PPA for Python 3.11
 ```bash
 sudo apt install -y software-properties-common
@@ -243,26 +257,30 @@ sudo apt install -y python3.11 python3.11-venv python3.11-dev python3-pip
 python3.11 -V
 ```
 
-  ###  4) Create & Activate the Virtual Environment
+
+###  4) Create & Activate the Virtual Environment
 ```bash
 python3.11 -m venv .venv
 source .venv/bin/activate
 ```
 
-  ###  5) Upgrade pip & Install Dependencies
+
+###  5) Upgrade pip & Install Dependencies
 ```bash
 python -m pip install --upgrade pip setuptools wheel
 pip install -r requirements.txt
 ```
 
-  ###  6) Configure Environment
+
+###  6) Configure Environment
     - Copy your environment template and edit values:
 ```bash
 cp .env.example .env
 nano .env   # or use code .env if VS Code is connected to WSL
 ```
 
-  ###  7) Install Kafka
+
+###  7) Install Kafka
   - In WSL terminal:
 ```bash
 cd ~
@@ -272,7 +290,7 @@ mv kafka_2.13-3.9.1 kafka
 ```
 
 
-  ###  8) Run Kafka
+###  8) Run Kafka
 ```bash
 # Start Kafka
 kafka-server-start.sh config/kraft/server.properties
@@ -339,6 +357,7 @@ Contributors names and contact info <br>
 ---
 
 ## Version History
+- P6 Main 2.2 | Modify README.md - updated Project Structure
 - P6 Main 2.1 | Modify README.md
 - P6 Main 2.0 | Modify README.md
 - P6 Main 1.2 | Modify README.md
