@@ -50,6 +50,7 @@ Roberts, S. W. (1959). Control chart tests based on geometric moving averages. T
 
 ## Project Structure
 
+```text
 mass_device/ <br>
 | - consumers/ <br>
 |   | - demo_mass_device_consumer.py <br>
@@ -73,6 +74,7 @@ mass_device/ <br>
 | - README.md <br>
 | - requirements.txt <br>
 | - setup.cfg <br>
+```
 
 ---
 
@@ -357,6 +359,7 @@ Contributors names and contact info <br>
 ---
 
 ## Version History
+- P6 Main 2.3 | Add image folder - for adding images to the README.md; Modify README.md - Formatting
 - P6 Main 2.2 | Modify README.md - updated Project Structure
 - P6 Main 2.1 | Modify README.md
 - P6 Main 2.0 | Modify README.md
