@@ -171,9 +171,9 @@ PY
 
 ## Quickstart
 
-# 1 Create & Activate venv
+## 1 Create & Activate venv
 
-# Windows
+### Windows
 ```shell
 # If you have multiple Pythons installed, prefer py -3.11:
 py -3.11 -m venv .venv
@@ -182,7 +182,7 @@ py -3.11 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 ```
 
-# macOS/Linux
+### macOS/Linux
 ```bash
 # Use the 3.11 interpreter explicitly if available:
 python3.11 -m venv .venv
@@ -191,44 +191,44 @@ python3.11 -m venv .venv
 source .venv/bin/activate
 ```
 
-# Check Version
+### Check Version
 ```bash
 python -V   # should report Python 3.11.x inside the venv
 ```
 
 
-# 2 Install Dependencies
+## 2 Install Dependencies
 
-# Windows
+### Windows
 ```shell
 python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-# macOS/Linux
+### macOS/Linux
 ```bash
 python3 -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
 
-# 3 Configure environment
+## 3 Configure environment
 
-# Windows
+### Windows
 ```shell
 # PowerShell supports cp, but Copy-Item is explicit:
 Copy-Item .env.example .env
 # Edit .env with your keys, location, and Kafka bootstrap servers.
 ```
 
-# macOS/Linux
+### macOS/Linux
 ```bash
 cp .env.example .env
 # Edit .env with your keys, location, and Kafka bootstrap servers.
 ```
 
 
-# 4 Running in WSL (Windows Subsystem for Linux)
+## 4 Running in WSL (Windows Subsystem for Linux)
 ** Note - You can also run the M.A.S.S. Device inside WSL2 for a native Linux experience while still working in Windows. This is especially useful for developers who want closer compatibility with Linux servers or Dockerized environments.
 
 
@@ -364,6 +364,7 @@ Contributors names and contact info <br>
 ---
 
 ## Version History
+- P6 Main 3.1 | Modify README.md - Formatting
 - P6 Main 3.0 | Modify README.md - Formatting
 - P6 Main 2.5 | Modify README.md - added paragraph for additional clarity on mass_device_consumer.py
 - P6 Main 2.4 | Modify mass_device.py, mass_device_consumer - copied demo over to use as base, mass_device_alerts - made some basic alerts, kafka.io.py, rolling_stats.py, utils_env.py, util_logger.py, README.md
