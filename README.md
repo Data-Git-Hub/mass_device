@@ -319,17 +319,17 @@ python -m consumers.demo_mass_device_consumer
 ** Note - In separate terminals (both with venv active): **
 
 
-# 5 Run Producer (Terminal One (1))
+## 5 Run Producer (Terminal One (1))
 
-# Windows/macOS/Linux
+### Windows/macOS/Linux
 ```bash
 python -m producers.weather_producer
 ```
 
 
-# 6 Run Consumer (Terminal Two (2))
+## 6 Run Consumer (Terminal Two (2))
 
-# Windows/macOS/Linux
+### Windows/macOS/Linux
 ```bash
 python -m consumers.weather_consumer
 ```
@@ -364,6 +364,7 @@ Contributors names and contact info <br>
 ---
 
 ## Version History
+- P6 Main 3.2 | Modify README.md - Formatting
 - P6 Main 3.1 | Modify README.md - Formatting
 - P6 Main 3.0 | Modify README.md - Formatting
 - P6 Main 2.5 | Modify README.md - added paragraph for additional clarity on mass_device_consumer.py
