@@ -8,7 +8,7 @@ The M.A.S.S. Device is a real-time streaming pipeline that ingests live weather 
 ---
 
 This README.md is the central documentation for the M.A.S.S. Device. It introduces the custom weather-streaming pipeline, describes how messages are ingested, processed, and visualized, and provides clear setup/run instructions.
-
+[]
 - Purpose: Demonstrate real-time analytics on streaming meteorological data using Kafka and Python. <br>
 - Message flow: Producers emit JSON weather messages, consumers apply rolling statistics (z-scores, EWMA, CUSUM), and anomalies are visualized with Matplotlib animation. <br>
 - Run instructions: Included under Quickstart with explicit steps for Windows, macOS/Linux, and WSL. <br>
@@ -171,7 +171,7 @@ PY
 
 ## Quickstart
 
-# 1) Create & Activate venv
+# 1 Create & Activate venv
 
 # Windows
 ```shell
@@ -197,7 +197,7 @@ python -V   # should report Python 3.11.x inside the venv
 ```
 
 
-# 2) Install Dependencies
+# 2 Install Dependencies
 
 # Windows
 ```shell
@@ -212,7 +212,7 @@ pip install -r requirements.txt
 ```
 
 
-# 3) Configure environment
+# 3 Configure environment
 
 # Windows
 ```shell
@@ -228,11 +228,11 @@ cp .env.example .env
 ```
 
 
-# 4) Running in WSL (Windows Subsystem for Linux)
+# 4 Running in WSL (Windows Subsystem for Linux)
 ** Note - You can also run the M.A.S.S. Device inside WSL2 for a native Linux experience while still working in Windows. This is especially useful for developers who want closer compatibility with Linux servers or Dockerized environments.
 
 
-###  1) Verify your WSL installation
+### 1 Verify your WSL installation
 ```shell
 wsl --install
 wsl --update
@@ -241,7 +241,7 @@ wsl --version
 ** Note - Make sure you are on WSL version 2 and have a Linux distribution (e.g., Ubuntu 22.04) installed. **
 
 
-###  2) Update Linux packages
+### 2 Update Linux packages
     - Open your WSL terminal (e.g., Ubuntu) and update:
     - 
 ```bash
@@ -249,7 +249,7 @@ sudo apt update && sudo apt upgrade -y
 ```
 
 
-###  3) Install Python 3.11
+### 3 Install Python 3.11
     - Most new WSL distros include Python 3.10 by default. Add the deadsnakes PPA for Python 3.11
 ```bash
 sudo apt install -y software-properties-common
@@ -265,21 +265,21 @@ python3.11 -V
 ```
 
 
-###  4) Create & Activate the Virtual Environment
+### 4 Create & Activate the Virtual Environment
 ```bash
 python3.11 -m venv .venv
 source .venv/bin/activate
 ```
 
 
-###  5) Upgrade pip & Install Dependencies
+### 5 Upgrade pip & Install Dependencies
 ```bash
 python -m pip install --upgrade pip setuptools wheel
 pip install -r requirements.txt
 ```
 
 
-###  6) Configure Environment
+### 6 Configure Environment
     - Copy your environment template and edit values:
 ```bash
 cp .env.example .env
@@ -287,7 +287,7 @@ nano .env   # or use code .env if VS Code is connected to WSL
 ```
 
 
-###  7) Install Kafka
+### 7 Install Kafka
   - In WSL terminal:
 ```bash
 cd ~
@@ -297,7 +297,7 @@ mv kafka_2.13-3.9.1 kafka
 ```
 
 
-###  8) Run Kafka
+### 8 Run Kafka
 ```bash
 # Start Kafka
 kafka-server-start.sh config/kraft/server.properties
@@ -306,20 +306,20 @@ kafka-server-start.bat config\kraft\server.properties
 ```
 
 
-  ###  9) Run Producer
+### 9 Run Producer
 ```bash
 python -m producers.demo_mass_device_producer
 ```
 
 
-  ### 10) Run Consumer
+### 10 Run Consumer
 ```bash
 python -m consumers.demo_mass_device_consumer
 ```
 ** Note - In separate terminals (both with venv active): **
 
 
-# 5) Run Producer (Terminal One (1))
+# 5 Run Producer (Terminal One (1))
 
 # Windows/macOS/Linux
 ```bash
@@ -327,7 +327,7 @@ python -m producers.weather_producer
 ```
 
 
-# 6) Run Consumer (Terminal Two (2))
+# 6 Run Consumer (Terminal Two (2))
 
 # Windows/macOS/Linux
 ```bash
@@ -364,6 +364,7 @@ Contributors names and contact info <br>
 ---
 
 ## Version History
+- P6 Main 3.0 | Modify README.md - Formatting
 - P6 Main 2.5 | Modify README.md - added paragraph for additional clarity on mass_device_consumer.py
 - P6 Main 2.4 | Modify mass_device.py, mass_device_consumer - copied demo over to use as base, mass_device_alerts - made some basic alerts, kafka.io.py, rolling_stats.py, utils_env.py, util_logger.py, README.md
 - P6 Main 2.3 | Add image folder - for adding images to the README.md; Modify README.md - Formatting
