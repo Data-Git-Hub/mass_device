@@ -391,3 +391,4 @@ Contributors names and contact info <br>
 
 ## Test History
 - P6 Test 1.0 | Test demo_mass_device_consumer.py - Access to folder for formulas for easier modification later in design: TEST - FAIL incorrect folder referencing
+- P6 Test 1.1 | Test demo_mass_device_consumer.py - Access to folder for formulas for easier modification later in design: TEST _ SUCCESS
