@@ -367,7 +367,8 @@ Contributors names and contact info <br>
 ---
 
 ## Version History
-- P6 Main 3,4 | Modify README.md
+- P6 Main 3.5 | Modify demo_mass_device_consumer.py, README.md
+- P6 Main 3.4 | Modify README.md
 - P6 Main 3.3 | Add meteorological_theories folder, demo_calc.py - to have a place to do updates for formulas as a demo; Modify README.md
 - P6 Main 3.2 | Modify README.md - Formatting
 - P6 Main 3.1 | Modify README.md - Formatting

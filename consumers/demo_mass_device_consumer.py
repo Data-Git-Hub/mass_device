@@ -5,6 +5,16 @@ from datetime import datetime
 import numpy as np
 import matplotlib.pyplot as plt
 
+# >>> added: import formulas from the new package
+from meteorological_theories.demo_calc import (
+    zscores,        # replaces local _zscores
+    ewma,           # available for later use
+    cusum,          # available for later use
+    dew_point_c,    # optional derived metric
+    heat_index_c,   # optional derived metric
+    wind_chill_c    # optional derived metric
+)
+
 # ---- Optional utils (fallback) ----
 logger = None
 def _get_logger():
@@ -74,14 +84,9 @@ def _tail_jsonl(path: pathlib.Path):
             except json.JSONDecodeError:
                 continue
 
-def _zscores(arr: np.ndarray):
-    if len(arr) < 2:
-        return np.zeros_like(arr, dtype=float)
-    mu = float(np.mean(arr))
-    sd = float(np.std(arr, ddof=1))
-    if sd == 0:
-        return np.zeros_like(arr, dtype=float)
-    return (arr - mu) / sd
+# >>> removed: local _zscores (now using imported zscores)
+# def _zscores(arr: np.ndarray):
+#     ...
 
 def main():
     cons = _maybe_kafka_consumer()
@@ -120,14 +125,29 @@ def main():
         ax1.set_ylim(t_arr.min()-1.5, t_arr.max()+1.5)
         ax2.set_ylim(p_arr.min()-1.5, p_arr.max()+1.5)
 
-        # anomalies (z-score on temp)
-        z = _zscores(t_arr)
+        # anomalies (z-score on temp) using imported zscores
+        z = zscores(t_arr)  # >>> changed
         mask = np.abs(z) >= ZTH
         xs = np.where(mask)[0]
         ys = t_arr[mask]
         scat.set_offsets(np.c_[xs, ys])
 
-        ax1.set_title(f"Temp & Pressure | n={len(t_arr)} | anomalies={mask.sum()} (|z|≥{ZTH})")
+        # >>> optional: compute a derived metric and show it subtly
+        try:
+            # pick the latest sample to annotate
+            latest_t = float(t_arr[-1])
+            latest_p = float(p_arr[-1])
+            # if humidity/wind available in stream, you can pass real values here
+            # demo: assume 60% RH and 3 m/s wind for an illustrative annotation
+            dp_c = dew_point_c(latest_t, 60.0)
+            wc_c = wind_chill_c(latest_t, 3.0)
+            ax1.set_title(
+                f"Temp & Pressure | n={len(t_arr)} | anomalies={mask.sum()} (|z|≥{ZTH}) "
+                f"| dew point≈{dp_c:.1f}°C, wind chill≈{wc_c:.1f}°C"
+            )
+        except Exception:
+            ax1.set_title(f"Temp & Pressure | n={len(t_arr)} | anomalies={mask.sum()} (|z|≥{ZTH})")
+
         fig.canvas.draw_idle()
         plt.pause(0.05)
 
