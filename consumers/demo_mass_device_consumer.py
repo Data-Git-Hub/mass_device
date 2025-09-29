@@ -100,6 +100,8 @@ def main():
     plt.ion()
     fig, ax1 = plt.subplots(figsize=(9, 4.5))
     ax2 = ax1.twinx()
+    fig.suptitle("M.A.S.S. Device — Live Temp & Pressure with Anomalies", y=0.98)
+    fig.subplots_adjust(top=0.88)
     line_t, = ax1.plot([], [], lw=1.7, label="Temp (°C)")
     line_p, = ax2.plot([], [], lw=1.0, alpha=0.75, label="Pressure (hPa)")
     scat = ax1.scatter([], [], s=28, marker="o", edgecolors="none", alpha=0.9)
@@ -143,8 +145,10 @@ def main():
             wc_c = wind_chill_c(latest_t, 3.0)
             ax1.set_title(
                 f"Temp & Pressure | n={len(t_arr)} | anomalies={mask.sum()} (|z|≥{ZTH}) "
-                f"| dew point≈{dp_c:.1f}°C, wind chill≈{wc_c:.1f}°C"
+                f"| dew point≈{dp_c:.1f}°C, wind chill≈{wc_c:.1f}°C",
+                pad=14
             )
+
         except Exception:
             ax1.set_title(f"Temp & Pressure | n={len(t_arr)} | anomalies={mask.sum()} (|z|≥{ZTH})")
 
