@@ -367,6 +367,7 @@ Contributors names and contact info <br>
 ---
 
 ## Version History
+- P6 Main 3.7 | Modify demo_mass_device_consumer.py - changing temperature to fahrenheit, README.md
 - P6 Main 3.6 | Modify demo_mass_device_consumer.py - changing current output graphic to not conceal title, README.md
 - P6 Main 3.5 | Modify demo_mass_device_consumer.py, README.md
 - P6 Main 3.4 | Modify README.md

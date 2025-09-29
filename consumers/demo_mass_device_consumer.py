@@ -15,6 +15,10 @@ from meteorological_theories.demo_calc import (
     wind_chill_c    # optional derived metric
 )
 
+# temperature conversion
+def _c_to_f(c: float) -> float:
+    return (c * 9.0/5.0) + 32.0
+
 # ---- Optional utils (fallback) ----
 logger = None
 def _get_logger():
@@ -102,11 +106,11 @@ def main():
     ax2 = ax1.twinx()
     fig.suptitle("M.A.S.S. Device — Live Temp & Pressure with Anomalies", y=0.98)
     fig.subplots_adjust(top=0.88)
-    line_t, = ax1.plot([], [], lw=1.7, label="Temp (°C)")
+    line_t, = ax1.plot([], [], lw=1.7, label="Temp (°F)")    # was °C
     line_p, = ax2.plot([], [], lw=1.0, alpha=0.75, label="Pressure (hPa)")
     scat = ax1.scatter([], [], s=28, marker="o", edgecolors="none", alpha=0.9)
     ax1.set_xlabel("Time (HH:MM:SS)")
-    ax1.set_ylabel("Temp (°C)")
+    ax1.set_ylabel("Temp (°F)")                              # was °C
     ax2.set_ylabel("Pressure (hPa)")
     ax1.grid(True, alpha=0.3)
     fig.legend(loc="upper right")
@@ -141,11 +145,11 @@ def main():
             latest_p = float(p_arr[-1])
             # if humidity/wind available in stream, you can pass real values here
             # demo: assume 60% RH and 3 m/s wind for an illustrative annotation
-            dp_c = dew_point_c(latest_t, 60.0)
-            wc_c = wind_chill_c(latest_t, 3.0)
+            dp_f = _c_to_f(dew_point_c(latest_t, 60.0))
+            wc_f = _c_to_f(wind_chill_c(latest_t, 3.0))
             ax1.set_title(
                 f"Temp & Pressure | n={len(t_arr)} | anomalies={mask.sum()} (|z|≥{ZTH}) "
-                f"| dew point≈{dp_c:.1f}°C, wind chill≈{wc_c:.1f}°C",
+                f"| dew point≈{dp_f:.1f}°F, wind chill≈{wc_f:.1f}°F",
                 pad=14
             )
 
@@ -171,7 +175,7 @@ def main():
                 # tolerate slightly different formats
                 ts = datetime.fromisoformat(obj["ts_iso"].replace("Z", "+00:00")).replace(tzinfo=None)
             times.append(ts)
-            temps.append(float(obj["temp_c"]))
+            temps.append(_c_to_f(float(obj["temp_c"])))     # convert on ingest
             press.append(float(obj["pressure_hpa"]))
             if len(times) % 10 == 0:
                 log.info("%s | temp=%.2f°C p=%.1f hPa", obj["ts_iso"], obj["temp_c"], obj["pressure_hpa"])
