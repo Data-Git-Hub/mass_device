@@ -55,30 +55,33 @@ The custom consumer continuously subscribes to the `weather_live` stream (or fal
 ## Project Structure
 
 ```text
-mass_device/ <br>
-| - consumers/ <br>
-|   | - demo_mass_device_consumer.py <br>
-|   | - mass_device_alerts.py <br>
-|   | - mass_device_consumer.py <br>
-| - data/ <br>
-|  | - demo_stream.josnl <br>
-|  | - image
-| - logs/ <br>
-| - producers/ <br>
-|   | - demo_mass_device_producer.py <br>
-|   | - mass_device_producer.py
-| - utils/ <br>
-|   | - kafka.io.py
-|   | - rolling_stats.py
-|   | - utils_env.py
-|   | - utils_logger.py
-| - .env.example <br>
-| - .gitignore <br>
-| - LICENSE <br>
-| - pyproject.toml <br>
-| - README.md <br>
-| - requirements.txt <br>
-| - setup.cfg <br>
+mass_device/
+| - consumers/
+|   | - demo_mass_device_consumer.py
+|   | - mass_device_alerts.py
+|   | - mass_device_consumer.py
+| - data/
+|     | - demo_stream.josnl
+| - image/
+| - logs/
+| - meteorological_theories/
+|       | - _init_.py
+|       | - demo_calc.py
+| - producers/
+|       | - demo_mass_device_producer.py
+|       | - mass_device_producer.py
+| - utils/
+|       | - kafka.io.py
+|       | - rolling_stats.py
+|       | - utils_env.py
+|       | - utils_logger.py
+| - .env.example
+| - .gitignore
+| - LICENSE
+| - pyproject.toml
+| - README.md
+| - requirements.txt
+| - setup.cfg
 ```
 
 ---
@@ -364,6 +367,7 @@ Contributors names and contact info <br>
 ---
 
 ## Version History
+- P6 Main 3,4 | Modify README.md
 - P6 Main 3.3 | Add meteorological_theories folder, demo_calc.py - to have a place to do updates for formulas as a demo; Modify README.md
 - P6 Main 3.2 | Modify README.md - Formatting
 - P6 Main 3.1 | Modify README.md - Formatting

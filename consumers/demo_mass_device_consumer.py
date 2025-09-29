@@ -5,7 +5,7 @@ from datetime import datetime
 import numpy as np
 import matplotlib.pyplot as plt
 
-# ---- Optional utils (graceful fallback) ----
+# ---- Optional utils (fallback) ----
 logger = None
 def _get_logger():
     global logger
