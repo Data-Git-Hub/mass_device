@@ -46,6 +46,10 @@ Roberts, S. W. (1959). Control chart tests based on geometric moving averages. T
 - Optional email/SMS alerts (pressure drops, wind gust thresholds, rapid change).
 - Clear env configuration; simple, reproducible repo structure.
 
+### Custom Consumer
+
+The custom consumer continuously subscribes to the `weather_live` stream (or falls back to a local JSONL file) and processes each message in real time. Incoming weather observations are parsed into a consistent JSON schema and stored in rolling windows for variables such as temperature and pressure. Within these windows, the consumer calculates statistical indicators like z-scores to identify anomalies, with extensions planned for exponentially weighted moving averages (EWMA) and cumulative sum (CUSUM) methods to capture gradual regime shifts. The processed data are rendered in an animated Matplotlib visualization, where temperature and pressure trends are plotted in real time and anomalies are highlighted with distinct markers. This design ensures that the consumer not only ingests and processes data but also transforms the raw stream into interpretable, actionable insights that clearly illustrate short-term atmospheric changes as they unfold.
+
 ---
 
 ## Project Structure
@@ -360,6 +364,7 @@ Contributors names and contact info <br>
 ---
 
 ## Version History
+- P6 Main 2.5 | Modify README.md - added paragraph for additional clarity on mass_device_consumer.py
 - P6 Main 2.4 | Modify mass_device.py, mass_device_consumer - copied demo over to use as base, mass_device_alerts - made some basic alerts, kafka.io.py, rolling_stats.py, utils_env.py, util_logger.py, README.md
 - P6 Main 2.3 | Add image folder - for adding images to the README.md; Modify README.md - Formatting
 - P6 Main 2.2 | Modify README.md - updated Project Structure
