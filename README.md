@@ -469,6 +469,7 @@ Contributors names and contact info <br>
 - P6 Test 4.0 | Test mass_device_consumer.py: TEST - FAIL Stall still from the graphic rendered
 - P6 Test 4.1 | Test mass_device_consumer.py: TEST - SUCCESS Fix stalling of graphic rendered
 - P6 Test 4.2 | Test mass_device_consumer.py: TEST - SUCCESS Fixed all axes titles
+- P6 Test 5.0 | Test mass_device_producer.py, mass_device_consumer.py: TEST - SUCCESS Ran to get assignment turn-in requirement
 
 ## Final Notes
 - Keys live only in .env (.gitignore)
