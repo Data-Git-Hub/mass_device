@@ -16,7 +16,7 @@ This README.md is the central documentation for the M.A.S.S. Device. It introduc
 - Logging: Both producers and consumers will integrate with utils_logger.py so events, anomalies, and errors are tracked in logs/. <br>
 - Verification: To finalize, include a screenshot of the animated chart (e.g., saved under assets/) and commit it with your submission. <br>
 
-** Note - This ensures the README.md is a living guide: not just for setup but also for interpretation of the insights and the analytics choices that make this project unique. ** <br>
+** Note - his README is a living guide for setup and interpretation of the analytics (why z-scores/EWMA/CUSUM, how to read the visualization, when alerts fire). ** <br>
 
 
 ---
@@ -56,25 +56,35 @@ The custom consumer continuously subscribes to the `weather_live` stream (or fal
 
 ```text
 mass_device/
-| - consumers/
-|   | - demo_mass_device_consumer.py
-|   | - mass_device_alerts.py
-|   | - mass_device_consumer.py
+| - | - consumers/
+|       | - demo_mass_device_consumer.py
+|       | - mass_device_alerts.py
+|       | - mass_device_consumer.py
 | - data/
+|     | - db/
+|         | - alerts,jsonl
+|         | - consumer_stream.josnl
+|         | - weather_stream.josnl
 |     | - demo_stream.josnl
 | - image/
 | - logs/
+|     | - demo_consumer.log
+|     | - demo_producer.log
+|     | - mass_device_alerts.log
+|     | - mass_device_consumer.log
+|     | - mass_device_producer.log
 | - meteorological_theories/
-|       | - _init_.py
-|       | - demo_calc.py
+|     | - _init_.py
+|     | - demo_calc.py
 | - producers/
-|       | - demo_mass_device_producer.py
-|       | - mass_device_producer.py
+|     | - demo_mass_device_producer.py
+|     | - mass_device_producer.py
 | - utils/
-|       | - kafka.io.py
-|       | - rolling_stats.py
-|       | - utils_env.py
-|       | - utils_logger.py
+|     | - kafka.io.py
+|     | - rolling_stats.py
+|     | - utils_env.py
+|     | - utils_jsondb.py
+|     | - utils_logger.py
 | - .env.example
 | - .gitignore
 | - LICENSE
@@ -230,119 +240,131 @@ cp .env.example .env
 # Edit .env with your keys, location, and Kafka bootstrap servers.
 ```
 
-
-## 4 Running in WSL (Windows Subsystem for Linux)
-** Note - You can also run the M.A.S.S. Device inside WSL2 for a native Linux experience while still working in Windows. This is especially useful for developers who want closer compatibility with Linux servers or Dockerized environments.
-
-
-### 1 Verify your WSL installation
-```shell
-wsl --install
-wsl --update
-wsl --version
-```
-** Note - Make sure you are on WSL version 2 and have a Linux distribution (e.g., Ubuntu 22.04) installed. **
-
-
-### 2 Update Linux packages
-    - Open your WSL terminal (e.g., Ubuntu) and update:
-    - 
+## .env Important Keys
 ```bash
-sudo apt update && sudo apt upgrade -y
+# --- Weather provider selection ---
+# Choices: open-meteo (no key, fast) | openweather (requires OPENWEATHER_API_KEY)
+WEATHER_PROVIDER=open-meteo
+
+# Location (Maryville, MO)
+LOCATION_LAT=40.3467
+LOCATION_LON=-94.8725
+
+# Producer cadence (seconds)
+POLL_SECONDS=60
+
+# --- OpenWeatherMap (only if WEATHER_PROVIDER=openweather) ---
+OPENWEATHER_API_KEY=REPLACE_ME
+OPENWEATHER_BASE=https://api.openweathermap.org/data/2.5/weather
+OPENWEATHER_UNITS=metric
+
+# --- Kafka (optional) ---
+KAFKA_BOOTSTRAP_SERVERS=localhost:9092
+KAFKA_TOPIC=weather_live
+KAFKA_GROUP_ID=mass_device
+
+# --- Alerts ---
+ALERTS_ENABLED=true
+ALERT_PRESSURE_DROP_HPA=3
+ALERT_WIND_GUST_MPS=15
+ALERT_COOLDOWN_MIN=30
+
+# --- Email via Brevo SMTP ---
+SMTP_HOST=smtp-relay.brevo.com
+SMTP_PORT=587
+SMTP_USER=your-smtp-login@smtp-brevo.com
+SMTP_PASS=your-long-smtp-key
+ALERT_EMAIL_FROM=your_verified_sender@example.com
+ALERT_EMAIL_TO=you@example.com
 ```
+### To switch providers later, just change `WEATHER_PROVIDER=open-meteo` switch which one has the "#" before it `openweather` (and set the OWM key if needed).
 
-
-### 3 Install Python 3.11
-    - Most new WSL distros include Python 3.10 by default. Add the deadsnakes PPA for Python 3.11
-```bash
-sudo apt install -y software-properties-common
-sudo add-apt-repository ppa:deadsnakes/ppa -y
-sudo apt update
-sudo apt install -y python3.11 python3.11-venv python3.11-dev python3-pip
-```
-
-** Make sure Python 3.11 is the default in your shell. **
-
-```shell
-python3.11 -V
-```
-
-
-### 4 Create & Activate the Virtual Environment
-```bash
-python3.11 -m venv .venv
-source .venv/bin/activate
-```
-
-
-### 5 Upgrade pip & Install Dependencies
-```bash
-python -m pip install --upgrade pip setuptools wheel
-pip install -r requirements.txt
-```
-
-
-### 6 Configure Environment
-    - Copy your environment template and edit values:
-```bash
-cp .env.example .env
-nano .env   # or use code .env if VS Code is connected to WSL
-```
-
-
-### 7 Install Kafka
-  - In WSL terminal:
-```bash
-cd ~
-wget https://downloads.apache.org/kafka/3.9.1/kafka_2.13-3.9.1.tgz
-tar -xzf kafka_2.13-3.9.1.tgz
-mv kafka_2.13-3.9.1 kafka
-```
-
-
-### 8 Run Kafka
-```bash
-# Start Kafka
-kafka-server-start.sh config/kraft/server.properties
-# Or on Windows:
-kafka-server-start.bat config\kraft\server.properties
-```
-
-
-### 9 Run Producer
-```bash
-python -m producers.demo_mass_device_producer
-```
-
-
-### 10 Run Consumer
-```bash
-python -m consumers.demo_mass_device_consumer
-```
-** Note - In separate terminals (both with venv active): **
-
-
-## 5 Run Producer (Terminal One (1))
-
-### Windows/macOS/Linux
-```bash
-python -m producers.weather_producer
-```
-
-
-## 6 Run Consumer (Terminal Two (2))
-
-### Windows/macOS/Linux
-```bash
-python -m consumers.weather_consumer
-```
-
----
-
-## API Key Hygiene (don’t commit secrets)
+### API Key Hygiene (don’t commit secrets)
 - Store the key in .env (and/or secrets/), both are git-ignored.
 - Never hard-code your key in .py files.
 - If you rotate keys, just update .env.
+
+## 4 Run Producer (Terminal One (1))
+
+### Windows/macOS/Linux
+```bash
+python -m producers.mass_device_producer
+```
+- With Kafka up, it publishes to weather_live.
+- Without Kafka, it still works—writes to data/demo_stream.jsonl.
+
+
+## 5 Run Consumer (Terminal Two (2))
+
+### Windows/macOS/Linux
+```bash
+python -m consumers.mass_device_consumer
+```
+- FIRST record is logged immediately, then every 10th message.
+- Animated chart shows Temp (°F) + Pressure (hPa) with anomalies marked.
+- Every consumed message is appended to data/db/consumer_stream.jsonl.
+- Alerts (when triggered) are appended to data/db/alerts.jsonl and emailed if ALERTS_ENABLED=true.
+
+---
+
+## Weather Providers
+- Open-Meteo (default): free, no API key, fast updates.
+    - Set WEATHER_PROVIDER=open-meteo
+
+- OpenWeatherMap: requires API key.
+  - Set WEATHER_PROVIDER=openweather and OPENWEATHER_API_KEY=...
+  - OWM “current weather” updates are typically ~10 min; don’t expect sub-minute changes.
+
+---
+
+## Brevo (Sendinblue) SMTP Setup
+### 1 Create account at brevo.com → verify your email.
+### 2 Go to Senders & Domains → add/verify your sender (the same address you put in ALERT_EMAIL_FROM).
+### 3 Go to SMTP & API → SMTP tab:
+  - Copy SMTP login (looks like xxxx@smtp-brevo.com) → put in SMTP_USER.
+  - Generate a SMTP key → put the entire string in SMTP_PASS.
+
+In .env, set:
+```bash
+SMTP_HOST=smtp-relay.brevo.com
+SMTP_PORT=587
+SMTP_USER=xxxx@smtp-brevo.com
+SMTP_PASS=your-long-smtp-key
+ALERT_EMAIL_FROM=verified_sender@example.com
+ALERT_EMAIL_TO=you@example.com
+```
+
+### 5 Save .env (never commit credentials).
+
+### Quick email test (PowerShell)
+```shell
+$code = @"
+from consumers.mass_device_alerts import maybe_send_alert
+fake = {
+  "ts_iso":"2025-09-30T03:45:00Z","provider":"brevo-test",
+  "lat":40.3467,"lon":-94.8725,"temp_c":23.0,"pressure_hpa":1019.5,
+  "humidity_pct":55,"wind_mps":3.1,"gust_mps":5.0,"z_score":2.4,
+  "reason":"Test anomaly"
+}
+maybe_send_alert(fake)
+print("Sent Brevo test alert (check inbox).")
+"@
+$code | python -
+```
+- If you don’t see it, check spam, confirm sender verification, and recheck SMTP_USER/SMTP_PASS.
+
+---
+
+## JSON “Database” Files
+- data/db/consumer_stream.jsonl – every consumed message (append-only)
+- data/db/alerts.jsonl – alert rows (reason, thresholds, snapshot of values)
+
+You can load these into pandas later:
+```shell
+import json, pandas as pd
+df = pd.DataFrame([json.loads(l) for l in open("data/db/alerts.jsonl", "r", encoding="utf-8")])
+print(df.tail())
+```
 
 ---
 
@@ -357,6 +379,24 @@ python -V, where python (Windows) / which python (WSL)
 kafka-topics.(bat|sh) --list --bootstrap-server localhost:9092
 ```
 
+- Chart freezes / “Not Responding”
+The consumer uses a background ingest thread and FuncAnimation to keep the UI responsive. If your machine is busy, lower the animation interval or window size: <br>
+    - In code: FuncAnimation(..., interval=250) and set WINDOW_POINTS=120 (or 60) in .env.
+
+- Right Y-axis label clipped
+We already reserve right-side space via:
+```shell
+fig.tight_layout(rect=(0.06, 0.12, 0.86, 0.90))
+ax2.set_ylabel("Pressure (hPa)", labelpad=18)
+```
+Adjust rect or labelpad if needed.
+
+- No Kafka
+The system runs fine without Kafka—producer writes JSONL, consumer tails it.
+
+- OWM looks “slow”
+That’s expected; their “current” endpoint updates roughly every 10 minutes. If you need faster, stick with Open-Meteo for development.
+
 ---
 
 ## Authors
@@ -367,6 +407,7 @@ Contributors names and contact info <br>
 ---
 
 ## Version History
+- P6 Finl 7.0 | Modify README.md
 - P6 Main 6.4 | Modify mass_device_consumer.py - change parameters of Figure 1 to include all axes titles, README.md
 - P6 Main 6.3 | Modify .env, .env.example, README.md
 - P6 Main 6.2 | Modify mass_device_consumer.py - restoring functionality back to app, README.md
@@ -424,3 +465,8 @@ Contributors names and contact info <br>
 - P6 Test 4.0 | Test mass_device_consumer.py: TEST - FAIL Stall still from the graphic rendered
 - P6 Test 4.1 | Test mass_device_consumer.py: TEST - SUCCESS Fix stalling of graphic rendered
 - P6 Test 4.2 | Test mass_device_consumer.py: TEST - SUCCESS Fixed all axes titles
+
+## Final Notes
+- Keys live only in .env (.gitignore)
+- The `consumer` logs FIRST... immediately when the first record arrives as a validity check
+- Time on teh X-axis is `local timezone` (incoming timestamps are UTC and converted)
