@@ -21,7 +21,7 @@ from meteorological_theories.demo_calc import (
     wind_chill_c    # optional derived metric
 )
 
-# temperature conversion
+# --- Temperature conversion ---
 def _c_to_f(c: float) -> float:
     return (c * 9.0/5.0) + 32.0
 
@@ -55,7 +55,7 @@ _load_env()
 log = _get_logger()
 
 TOPIC = os.getenv("KAFKA_TOPIC", "weather_demo")
-BOOTSTRAP = os.getenv("KAFKA_BOOTSTRAP_SERVERS")  # if not set → file tail
+BOOTSTRAP = os.getenv("KAFKA_BOOTSTRAP_SERVERS")  # if not set
 INFILE = pathlib.Path("data/demo_stream.jsonl")
 
 WINDOW = int(os.getenv("DEMO_WINDOW_SIZE", "120"))  # points
@@ -104,37 +104,38 @@ def main():
     press = collections.deque(maxlen=WINDOW)   # store hPa
 
     plt.ion()
-    fig, ax1 = plt.subplots(figsize=(9, 4.5))
+    fig, ax1 = plt.subplots(figsize=(9, 4.8))   # taller to help margins
     ax2 = ax1.twinx()
 
-    # --- Title space & layout so nothing is squished ---
+    # --- Space management so nothing is squished/cut off ---
     fig.suptitle("M.A.S.S. Device — Live Temp & Pressure with Anomalies", y=0.985)
-    fig.tight_layout(rect=(0, 0, 1, 0.93))
+    # Reserve margins: left, bottom, right, top (fractions of figure)
+    fig.tight_layout(rect=(0.06, 0.12, 0.98, 0.90))   # <-- extra bottom room for x-label
 
-    # Lines & scatter
+    # --- Lines & scatter ---
     line_t, = ax1.plot([], [], lw=1.7, label="Temp (°F)")
     line_p, = ax2.plot([], [], lw=1.0, alpha=0.75, label="Pressure (hPa)")
     scat = ax1.scatter([], [], s=28, marker="o", edgecolors="none", alpha=0.9)
 
-    # Axes labels/grid
-    ax1.set_xlabel("Time (HH:MM:SS)")
+    # --- Axes labels/grid ---
+    ax1.set_xlabel("Time (HH:MM:SS)", labelpad=8)  # labelpad to avoid crowding bottom frame
     ax1.set_ylabel("Temp (°F)")
     ax2.set_ylabel("Pressure (hPa)")
     ax1.grid(True, alpha=0.3)
 
-    # Single legend INSIDE the axes (lower-right)
+    # --- Single legend INSIDE the axes (lower-right) ---
     handles1, labels1 = ax1.get_legend_handles_labels()
     handles2, labels2 = ax2.get_legend_handles_labels()
     legend = ax1.legend(
         handles1 + handles2,
         labels1 + labels2,
         loc="lower right",
-        bbox_to_anchor=(0.985, 0.02),  # near bottom-right inside axes
+        bbox_to_anchor=(0.985, 0.04),  # slightly above bottom to clear x-label
         borderaxespad=0.6,
         framealpha=0.9
     )
 
-    # Create a metrics textbox once; update its text on each redraw
+    # --- Create a metrics textbox once; update its text on each redraw ---
     ax1._metrics_box = ax1.text(
         0.01, 0.98, "",
         transform=ax1.transAxes,
@@ -151,20 +152,19 @@ def main():
         t_arr = np.array(temps, dtype=float)   # °F
         p_arr = np.array(press, dtype=float)   # hPa
 
-        # update lines
+        # --- update lines ---
         xs = np.arange(len(xlabels))
         line_t.set_data(xs, t_arr)
         line_p.set_data(xs, p_arr)
 
-        # autoscale
+        # --- autoscale ---
         ax1.set_xlim(0, max(10, len(xs) - 1))
         if t_arr.size:
             ax1.set_ylim(t_arr.min() - 2.0, t_arr.max() + 2.0)
         if p_arr.size:
             ax2.set_ylim(p_arr.min() - 1.5, p_arr.max() + 1.5)
 
-        # anomalies (z-score on temperature) — scale-invariant
-        # for correctness use °C in z-score; convert back from °F:
+        # --- anomalies (z-score on temperature) — scale-invariant ---
         if t_arr.size:
             t_arr_c = (t_arr - 32.0) * 5.0/9.0
             z = zscores(t_arr_c)
@@ -173,16 +173,16 @@ def main():
         else:
             mask = np.zeros(0, dtype=bool)
 
-        # Short, clear axes title (no long strings that wrap)
+        # --- Short, clear axes title ---
         ax1.set_title(f"Temp & Pressure (|z|≥{ZTH})", pad=10)
 
-        # Metrics box (compact summary)
+        # --- Metrics box (compact summary) ---
         try:
             if t_arr.size:
                 latest_t_f = float(t_arr[-1])
                 latest_t_c = (latest_t_f - 32.0) * 5.0/9.0
-                dp_f = _c_to_f(dew_point_c(latest_t_c, 60.0))   # replace 60.0 with obj["humidity_pct"] when available
-                wc_f = _c_to_f(wind_chill_c(latest_t_c, 3.0))   # replace 3.0 with obj["wind_mps"] when available
+                dp_f = _c_to_f(dew_point_c(latest_t_c, 60.0))   # replace with obj["humidity_pct"] later
+                wc_f = _c_to_f(wind_chill_c(latest_t_c, 3.0))   # replace with obj["wind_mps"] later
                 ax1._metrics_box.set_text(
                     f"n={len(t_arr)} | anomalies={int(mask.sum())}  •  "
                     f"dew point≈{dp_f:.1f}°F  •  wind chill≈{wc_f:.1f}°F"
@@ -213,7 +213,7 @@ def main():
 
             times.append(ts)
             temps.append(_c_to_f(float(obj["temp_c"])))      # store °F
-            press.append(float(obj["pressure_hpa"]))          # store hPa
+            press.append(float(obj["pressure_hpa"]))         # store hPa
 
             if len(times) % 10 == 0:
                 log.info("%s | temp=%.1f°F p=%.1f hPa", obj["ts_iso"], temps[-1], press[-1])
