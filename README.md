@@ -405,3 +405,4 @@ Contributors names and contact info <br>
 - P6 TEST 2.1 | Test demo_mass_device_consumer.py - Confirm change in output graphic: TEST - SUCCESS
 - P6 Test 2.2 | Test demo_mass_device_consumer.py - Confirm change in output graphic: TEST - SUCCESS
 - P6 Test 3.0 | Test mass_device_producer.py, mass_device_consumer.py: TEST - FAIL consumer didn't process any data
+- P6 Test 3.1 | Test mass_device_producer.py, mass_device_consumer.py: TEST - SUCCESS need to check openweather API key
