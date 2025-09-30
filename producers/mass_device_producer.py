@@ -162,15 +162,14 @@ def main():
                 with FALLBACK_FILE.open("a", encoding="utf-8") as f:
                     f.write(payload.decode("utf-8") + "\n")
 
-            if seq % 5 == 0:
-                log.info(
-                    "emitted #%d | %s | provider=%s | temp=%.2f°C p=%.1f hPa hum=%.0f%% wind=%.2f m/s",
-                    seq, msg["ts_iso"], msg.get("provider", "n/a"),
-                    msg.get("temp_c", float("nan")),
-                    msg.get("pressure_hpa", float("nan")),
-                    msg.get("humidity_pct", float("nan")),
-                    msg.get("wind_mps", float("nan")),
-                )
+            log.info(
+                "emitted #%d | %s | provider=%s | temp=%.2f°C p=%.1f hPa hum=%.0f%% wind=%.2f m/s",
+                seq, msg["ts_iso"], msg.get("provider", "n/a"),
+                msg.get("temp_c", float("nan")),
+                msg.get("pressure_hpa", float("nan")),
+                msg.get("humidity_pct", float("nan")),
+                msg.get("wind_mps", float("nan")),
+            )
             seq += 1
             time.sleep(POLL_SECONDS)
     except KeyboardInterrupt:

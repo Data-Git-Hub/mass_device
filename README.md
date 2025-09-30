@@ -367,6 +367,7 @@ Contributors names and contact info <br>
 ---
 
 ## Version History
+- P6 Main 4.6 | Modify mass_device_producer.py - Changed to emit more often, in lieu of every 5 minutes to actual, Modify README.md
 - P6 Main 4.5 | Modify mass_device_producer.py - Changed def fetch_openweather to allow for the API key to work correctly, Modify README.md
 - P6 Main 4.4 | Modify mass_device_consumer.py - Corrected issues with Figure 1 disappearing, Modify README.md
 - P6 Main 4.3 | Add .env - Add API key, Modify README.md
