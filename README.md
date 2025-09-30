@@ -367,6 +367,8 @@ Contributors names and contact info <br>
 ---
 
 ## Version History
+- P6 Main 4.3 | Add .env - Add API key, Modify README.md
+- P6 Main 4.2 | Modify .env.example, README.md
 - P6 Main 4.1 | Modify mass_device_consumer.py - Add consume streaming data, README.md
 - P6 Main 4.0 | Modify mass_device_producer.py - Add live streaming data, README.md
 - P6 Main 3.9 | Modify demo_mass_device_consumer.py - change x-axis title placement, README.md
