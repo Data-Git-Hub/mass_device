@@ -357,21 +357,6 @@ python -V, where python (Windows) / which python (WSL)
 kafka-topics.(bat|sh) --list --bootstrap-server localhost:9092
 ```
 
-- OpenWeatherMap (OWM)
-```shell
-python - <<'PY'
-import os, requests
-lat, lon = 40.3467, -94.8725
-key = os.getenv("OPENWEATHER_API_KEY") or "PUT_KEY_HERE_FOR_TEST_ONLY"
-url = "https://api.openweathermap.org/data/2.5/weather"
-r = requests.get(url, params={"lat": lat, "lon": lon, "appid": key, "units": "metric"}, timeout=10)
-print("STATUS:", r.status_code)
-print("URL:", r.url)
-print("HAS temp:", "temp" in (r.json().get("main") or {}))
-print("SNIP:", str(r.json())[:200])
-PY
-```
-
 ---
 
 ## Authors
@@ -382,8 +367,8 @@ Contributors names and contact info <br>
 ---
 
 ## Version History
-- P6 Main 4.5 | Modify mass_device_producer.py - Changed def fetch_openweather to allow for the API key to work correctly
-- P6 Main 4.4 | Modify mass_device_consumer.py - Corrected issues with Figure 1 disappearing
+- P6 Main 4.5 | Modify mass_device_producer.py - Changed def fetch_openweather to allow for the API key to work correctly, Modify README.md
+- P6 Main 4.4 | Modify mass_device_consumer.py - Corrected issues with Figure 1 disappearing, Modify README.md
 - P6 Main 4.3 | Add .env - Add API key, Modify README.md
 - P6 Main 4.2 | Modify .env.example, README.md
 - P6 Main 4.1 | Modify mass_device_consumer.py - Add consume streaming data, README.md
@@ -422,3 +407,4 @@ Contributors names and contact info <br>
 - P6 Test 2.2 | Test demo_mass_device_consumer.py - Confirm change in output graphic: TEST - SUCCESS
 - P6 Test 3.0 | Test mass_device_producer.py, mass_device_consumer.py: TEST - FAIL consumer didn't process any data
 - P6 Test 3.1 | Test mass_device_producer.py, mass_device_consumer.py: TEST - SUCCESS need to check openweather API key
+- P6 Test 3.2 | Test mass_device_producer.py, mass_device_consumer.py: TEST - FAIL OpenWeatherMap API Key isn't activated, need to wait for API activation email
