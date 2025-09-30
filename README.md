@@ -417,3 +417,4 @@ Contributors names and contact info <br>
 - P6 Test 3.3 | Test mass_device_producer.py. mass_device_consumer.py: TEST - FAIL
 - P6 Test 3.4 | Test mass_device_producer.py. mass_device_consumer.py: TEST - FAIL Modifying refresh rate
 - P6 Test 3.5 | Test mass_device_alerts.py: TEST - PASS Successful sent email alert to University account
+- P6 Test 4.0 | Test mass_device_consumer.py: TEST - FAIL Stall still from the graphic rendered
