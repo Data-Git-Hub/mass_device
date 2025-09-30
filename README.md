@@ -367,6 +367,7 @@ Contributors names and contact info <br>
 ---
 
 ## Version History
+- P6 Main 4.0 | Modify mass_device_consumer.py - Add live streaming data, README.md
 - P6 Main 3.9 | Modify demo_mass_device_consumer.py - change x-axis title placement, README.md
 - P6 Main 3.8 | Modify demo_mass_device_consumer.py - change legend placement, README.md
 - P6 Main 3.7 | Modify demo_mass_device_consumer.py - changing temperature to fahrenheit, README.md
