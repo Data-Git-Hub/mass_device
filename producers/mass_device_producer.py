@@ -114,17 +114,14 @@ def _fetch_openweather(lat: float, lon: float) -> Optional[Dict[str, Any]]:
     if not OWM_API_KEY:
         log.warning("OPENWEATHER_API_KEY not set; cannot fetch OpenWeather live data.")
         return None
-    params = {
-        "lat": lat,
-        "lon": lon,
-        "appid": OWM_API_KEY,
-        "units": OWM_UNITS  # 'metric' => °C, 'imperial' => °F (we standardize to °C below)
-    }
+    params = {"lat": lat, "lon": lon, "appid": OWM_API_KEY, "units": OWM_UNITS}
     try:
         r = requests.get(OWM_BASE, params=params, timeout=10)
-        r.raise_for_status()
+        try: r.raise_for_status()
+        except Exception as e:
+            log.warning("OpenWeather HTTP %s | URL=%s | body=%s", r.status_code, r.url, r.text[:300])
+            return None
         msg = _normalize_openweather(r.json())
-        # If user set imperial (°F), convert to °C to maintain a single schema
         if msg and OWM_UNITS.lower() == "imperial":
             msg["temp_c"] = (msg["temp_c"] - 32.0) * 5.0/9.0
         return msg
