@@ -367,6 +367,7 @@ Contributors names and contact info <br>
 ---
 
 ## Version History
+- P6 Main 6.4 | Modify mass_device_consumer.py - change parameters of Figure 1 to include all axes titles, README.md
 - P6 Main 6.3 | Modify .env, .env.example, README.md
 - P6 Main 6.2 | Modify mass_device_consumer.py - restoring functionality back to app, README.md
 - P6 Main 6.1 | Modify mass_device_consumer.py - help render the graph better, README.md

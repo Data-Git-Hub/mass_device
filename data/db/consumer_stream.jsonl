@@ -55,3 +55,7 @@
 {"ts_iso": "2025-09-30T05:45:23Z", "provider": "openweather", "lat": 40.3467, "lon": -94.8725, "temp_c": 19.99, "pressure_hpa": 1020.0, "humidity_pct": 68.0, "wind_mps": 2.06, "gust_mps": 0.0}
 {"ts_iso": "2025-09-30T05:49:23Z", "provider": "openweather", "lat": 40.3467, "lon": -94.8725, "temp_c": 19.99, "pressure_hpa": 1020.0, "humidity_pct": 68.0, "wind_mps": 2.06, "gust_mps": 0.0}
 {"ts_iso": "2025-09-30T05:53:23Z", "provider": "openweather", "lat": 40.3467, "lon": -94.8725, "temp_c": 19.99, "pressure_hpa": 1020.0, "humidity_pct": 68.0, "wind_mps": 2.06, "gust_mps": 0.0}
+{"ts_iso": "2025-09-30T05:57:24Z", "provider": "openweather", "lat": 40.3467, "lon": -94.8725, "temp_c": 19.99, "pressure_hpa": 1020.0, "humidity_pct": 68.0, "wind_mps": 2.06, "gust_mps": 0.0}
+{"ts_iso": "2025-09-30T06:02:53Z", "provider": "openweather", "lat": 40.3467, "lon": -94.8725, "temp_c": 19.99, "pressure_hpa": 1021.0, "humidity_pct": 68.0, "wind_mps": 2.57, "gust_mps": 0.0}
+{"ts_iso": "2025-09-30T06:08:54Z", "provider": "openweather", "lat": 40.3467, "lon": -94.8725, "temp_c": 19.99, "pressure_hpa": 1021.0, "humidity_pct": 68.0, "wind_mps": 2.57, "gust_mps": 0.0}
+{"ts_iso": "2025-09-30T06:10:55Z", "provider": "openweather", "lat": 40.3461, "lon": -94.8722, "temp_c": 19.99, "pressure_hpa": 1021.0, "humidity_pct": 68.0, "wind_mps": 2.57, "gust_mps": 0.0}
