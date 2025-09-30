@@ -1,0 +1,1 @@
+{"ts_iso": "2025-09-30T04:26:15Z", "reason": "Temperature anomaly |z|≥2.0 (z=-2.67)", "provider": "openweather", "lat": 40.3467, "lon": -94.8725, "temp_c": 20.99, "pressure_hpa": 1021.0, "humidity_pct": 64.0, "wind_mps": 3.09, "gust_mps": 0.0, "z_score": -2.6666666666666674, "thresholds": {"ZTH": 2.0, "ALERT_PRESSURE_DROP_HPA": 3.0, "ALERT_WIND_GUST_MPS": 15.0}}
