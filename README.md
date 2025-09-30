@@ -50,6 +50,9 @@ Roberts, S. W. (1959). Control chart tests based on geometric moving averages. T
 
 The custom consumer continuously subscribes to the `weather_live` stream (or falls back to a local JSONL file) and processes each message in real time. Incoming weather observations are parsed into a consistent JSON schema and stored in rolling windows for variables such as temperature and pressure. Within these windows, the consumer calculates statistical indicators like z-scores to identify anomalies, with extensions planned for exponentially weighted moving averages (EWMA) and cumulative sum (CUSUM) methods to capture gradual regime shifts. The processed data are rendered in an animated Matplotlib visualization, where temperature and pressure trends are plotted in real time and anomalies are highlighted with distinct markers. This design ensures that the consumer not only ingests and processes data but also transforms the raw stream into interpretable, actionable insights that clearly illustrate short-term atmospheric changes as they unfold.
 
+Below is the animated consumer visualization showing temperature (°F) and pressure (hPa) over time with anomalies highlighted:
+![Live Chart](image/7.4.F.png)
+
 ---
 
 ## Project Structure
@@ -407,6 +410,7 @@ Contributors names and contact info <br>
 ---
 
 ## Version History
+- P6 Finl 7.1 | Add 7.4.F.png; Modify README.md
 - P6 Finl 7.0 | Modify README.md
 - P6 Main 6.4 | Modify mass_device_consumer.py - change parameters of Figure 1 to include all axes titles, README.md
 - P6 Main 6.3 | Modify .env, .env.example, README.md
