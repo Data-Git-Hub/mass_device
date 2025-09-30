@@ -367,6 +367,7 @@ Contributors names and contact info <br>
 ---
 
 ## Version History
+- P6 Main 6.1 | Modify mass_device_consumer.py - help render the graph better, README.md
 - P6 Main 6.0 | Modify mass_device_consumer.py - help render the graph better, README.md
 - P6 Main 5.2 | Modify mass_device_alerts.py - change so the path for the .env is loaded, README.md
 - P6 Main 5.1 | Modify mass_device_alerts.py, README.md

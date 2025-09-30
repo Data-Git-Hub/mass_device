@@ -1,10 +1,20 @@
 # consumers/mass_device_consumer.py
 from __future__ import annotations
-import os, json, time, pathlib, collections, sys
+import os, json, time, pathlib, collections, sys, threading, queue
 from datetime import datetime
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 import numpy as np
+
+# --- Matplotlib backend: TkAgg on Windows to avoid GUI freezes ---
+import matplotlib
+try:
+    if os.name == "nt":
+        matplotlib.use("TkAgg")
+except Exception:
+    pass
 import matplotlib.pyplot as plt
+import matplotlib.animation as animation
+from matplotlib.dates import DateFormatter, AutoDateLocator, date2num
 
 # --- Ensure project root import path ---
 from pathlib import Path as _Path
@@ -17,17 +27,17 @@ from meteorological_theories.demo_calc import (
 )
 from utils.utils_jsondb import append_jsonl, ensure_parent
 
-# Optional: email/SMS hooks (no-op if not configured)
+# --- Optional: email/SMS hooks (no-op if not configured) ---
 try:
     from consumers.mass_device_alerts import maybe_send_alert
 except Exception:
     def maybe_send_alert(_alert: Dict[str, Any]) -> None:
         pass
 
+# --- Helpers ---
 def _c_to_f(c: float) -> float:
     return (c * 9.0/5.0) + 32.0
 
-# --- Logger / Env ---
 logger = None
 def _get_logger():
     global logger
@@ -35,13 +45,11 @@ def _get_logger():
         return logger
     try:
         from utils.utils_logger import get_logger
-        logger = get_logger("mass_device_consumer")
+        return get_logger("mass_device_consumer")
     except Exception:
         import logging
-        logging.basicConfig(level=logging.INFO,
-                            format="%(asctime)s %(levelname)s %(message)s")
-        logger = logging.getLogger("mass_device_consumer")
-    return logger
+        logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+        return logging.getLogger("mass_device_consumer")
 
 def _load_env():
     try:
@@ -54,6 +62,7 @@ def _load_env():
         except Exception:
             pass
 
+# --- Config ---
 _load_env()
 log = _get_logger()
 
@@ -71,10 +80,9 @@ ALERT_WIND_GUST = float(os.getenv("ALERT_WIND_GUST_MPS", "15"))
 JSON_DB_DIR = pathlib.Path("data/db")
 CONSUMER_DB = JSON_DB_DIR / "consumer_stream.jsonl"
 ALERTS_DB   = JSON_DB_DIR / "alerts.jsonl"
-ensure_parent(CONSUMER_DB)
-ensure_parent(ALERTS_DB)
+ensure_parent(CONSUMER_DB); ensure_parent(ALERTS_DB)
 
-# --- Kafka wiring ---
+# --- Sources ---
 def _maybe_kafka_consumer():
     if not BOOTSTRAP:
         return None
@@ -101,7 +109,7 @@ def _kafka_stream(consumer):
                     for m in msgs:
                         yield m.value
             else:
-                time.sleep(0.1)
+                time.sleep(0.05)
         except Exception as e:
             log.error("Kafka poll error: %s", e)
             time.sleep(1.0)
@@ -114,14 +122,14 @@ def _tail_jsonl(path: pathlib.Path):
         while True:
             line = f.readline()
             if not line:
-                time.sleep(0.2)
+                time.sleep(0.05)
                 continue
             try:
                 yield json.loads(line)
             except json.JSONDecodeError:
                 continue
 
-# --- Alert helpers ---
+# --- Alerts ---
 def _emit_alert(reason: str, ctx: Dict[str, Any]) -> None:
     alert = {
         "ts_iso": ctx.get("ts_iso"),
@@ -143,171 +151,229 @@ def _emit_alert(reason: str, ctx: Dict[str, Any]) -> None:
     }
     append_jsonl(ALERTS_DB, alert)
     log.warning("ALERT: %s | t=%.1f°C p=%.1f hPa wind=%.2f m/s gust=%.2f m/s",
-                reason, ctx.get("temp_c", float("nan")),
-                ctx.get("pressure_hpa", float("nan")),
-                ctx.get("wind_mps", float("nan")),
-                ctx.get("gust_mps", float("nan")))
+                reason, ctx.get("temp_c", float("nan")), ctx.get("pressure_hpa", float("nan")),
+                ctx.get("wind_mps", float("nan")), ctx.get("gust_mps", float("nan")))
     if ALERTS_ENABLED:
         try:
             maybe_send_alert(alert)
         except Exception as e:
             log.error("Alert send failed: %s", e)
 
-# --- Main ---
-def main():
-    cons = _maybe_kafka_consumer()
-    log.info("Consumer start | Kafka=%s | topic=%s | window=%d | zth=%.2f",
-             "ON" if cons else "OFF(file)", TOPIC, WINDOW, ZTH)
+# --- Thread Ingest + UI ---
+class ConsumerApp:
+    def __init__(self):
+        self.cons = _maybe_kafka_consumer()
+        log.info("Consumer start | Kafka=%s | topic=%s | window=%d | zth=%.2f",
+                 "ON" if self.cons else "OFF(file)", TOPIC, WINDOW, ZTH)
 
-    times = collections.deque(maxlen=WINDOW)
-    temps_f = collections.deque(maxlen=WINDOW)
-    press = collections.deque(maxlen=WINDOW)
+        # data buffers
+        self.times = collections.deque(maxlen=WINDOW)
+        self.temps_f = collections.deque(maxlen=WINDOW)
+        self.press = collections.deque(maxlen=WINDOW)
+        self.last_pressure: Optional[float] = None
+        self.first_logged = False
 
-    plt.ion()
-    fig, ax1 = plt.subplots(figsize=(9, 4.8))
-    ax2 = ax1.twinx()
+        # handoff queue from ingest thread -> UI
+        self.q: queue.Queue[Dict[str, Any]] = queue.Queue(maxsize=1000)
+        self.running = True
 
-    fig.suptitle("M.A.S.S. Device — Live Temp & Pressure with Anomalies", y=0.985)
-    fig.tight_layout(rect=(0.06, 0.12, 0.98, 0.90))
+        # figure
+        self.fig, self.ax1 = plt.subplots(figsize=(9, 4.8))
+        self.ax2 = self.ax1.twinx()
 
-    line_t, = ax1.plot([], [], lw=1.7, label="Temp (°F)")
-    line_p, = ax2.plot([], [], lw=1.0, alpha=0.75, label="Pressure (hPa)")
-    scat = ax1.scatter([], [], s=28, marker="o", edgecolors="none", alpha=0.9)
+        self.fig.suptitle("M.A.S.S. Device — Live Temp & Pressure with Anomalies", y=0.985)
+        self.fig.tight_layout(rect=(0.06, 0.12, 0.98, 0.90))
 
-    ax1.set_xlabel("Time (HH:MM:SS)", labelpad=8)
-    ax1.set_ylabel("Temp (°F)")
-    ax2.set_ylabel("Pressure (hPa)")
-    ax1.grid(True, alpha=0.3)
+        (self.line_t,) = self.ax1.plot([], [], lw=1.7, label="Temp (°F)")
+        (self.line_p,) = self.ax2.plot([], [], lw=1.0, alpha=0.75, label="Pressure (hPa)")
+        self.scat = self.ax1.scatter([], [], s=28, marker="o", edgecolors="none", alpha=0.9)
 
-    h1, l1 = ax1.get_legend_handles_labels()
-    h2, l2 = ax2.get_legend_handles_labels()
-    ax1.legend(h1 + h2, l1 + l2, loc="lower right",
-               bbox_to_anchor=(0.985, 0.04), borderaxespad=0.6, framealpha=0.9)
+        self.ax1.set_xlabel("Time (HH:MM:SS)", labelpad=8)
+        self.ax1.set_ylabel("Temp (°F)")
+        self.ax2.set_ylabel("Pressure (hPa)")
+        self.ax1.grid(True, alpha=0.3)
 
-    ax1._metrics_box = ax1.text(
-        0.01, 0.98, "",
-        transform=ax1.transAxes,
-        ha="left", va="top", fontsize=9,
-        bbox=dict(boxstyle="round,pad=0.3", fc="white", ec="0.8", alpha=0.75)
-    )
+        h1, l1 = self.ax1.get_legend_handles_labels()
+        h2, l2 = self.ax2.get_legend_handles_labels()
+        self.ax1.legend(h1 + h2, l1 + l2, loc="lower right",
+                        bbox_to_anchor=(0.985, 0.04), borderaxespad=0.6, framealpha=0.9)
 
-    def redraw():
-        if not times:
+        self.ax1._metrics_box = self.ax1.text(
+            0.01, 0.98, "",
+            transform=self.ax1.transAxes,
+            ha="left", va="top", fontsize=9,
+            bbox=dict(boxstyle="round,pad=0.3", fc="white", ec="0.8", alpha=0.75)
+        )
+
+        # nicer time ticks
+        self._locator = AutoDateLocator()
+        self._formatter = DateFormatter("%H:%M:%S")
+        self.ax1.xaxis.set_major_locator(self._locator)
+        self.ax1.xaxis.set_major_formatter(self._formatter)
+
+        # ingest thread
+        self.thread = threading.Thread(target=self._ingest_loop, daemon=True)
+        self.thread.start()
+
+        # animation timer ~ 10 FPS refresh (cheap; real work only when queue has data)
+        self.ani = animation.FuncAnimation(
+            self.fig, self._on_timer, interval=100, blit=False, cache_frame_data=False
+        )
+
+    def _source_iter(self):
+        if self.cons:
+            yield from _kafka_stream(self.cons)
+        else:
+            yield from _tail_jsonl(INFILE)
+
+    def _ingest_loop(self):
+        try:
+            for obj in self._source_iter():
+                # persist what we process
+                try:
+                    append_jsonl(CONSUMER_DB, obj)
+                except Exception as e:
+                    log.warning("Failed to append consumer row: %s", e)
+                try:
+                    self.q.put(obj, timeout=1.0)
+                except queue.Full:
+                    log.warning("Consumer queue full; dropping message")
+        except Exception as e:
+            log.error("Ingest thread error: %s", e)
+        finally:
+            self.running = False
+
+    def _process_one(self, obj: Dict[str, Any]):
+        # parse time
+        try:
+            ts = datetime.strptime(obj["ts_iso"], "%Y-%m-%dT%H:%M:%SZ")
+        except Exception:
+            ts = datetime.fromisoformat(obj["ts_iso"].replace("Z", "+00:00")).replace(tzinfo=None)
+        self.times.append(ts)
+
+        t_c = float(obj.get("temp_c", np.nan))
+        p_hpa = float(obj.get("pressure_hpa", np.nan))
+        h_pct = float(obj.get("humidity_pct", 60.0))
+        w_mps = float(obj.get("wind_mps", 3.0))
+        g_mps = float(obj.get("gust_mps", 0.0))
+
+        self.temps_f.append(_c_to_f(t_c))
+        self.press.append(p_hpa)
+
+        # HUD metrics
+        dp_f = _c_to_f(dew_point_c(t_c, h_pct))
+        wc_f = _c_to_f(wind_chill_c(t_c, w_mps))
+
+        n = len(self.temps_f)
+        t_arr_c_now = (np.array(self.temps_f, dtype=float) - 32.0) * 5.0/9.0
+        z_now = zscores(t_arr_c_now) if n else np.array([])
+        anomalies = int((np.abs(z_now) >= ZTH).sum()) if z_now.size else 0
+
+        self.ax1._metrics_box.set_text(
+            f"n={n} | anomalies={anomalies}  •  dew≈{dp_f:.1f}°F  •  wind chill≈{wc_f:.1f}°F"
+        )
+
+        # alerts
+        ctx = {
+            "ts_iso": obj.get("ts_iso"),
+            "provider": obj.get("provider"),
+            "lat": obj.get("lat"),
+            "lon": obj.get("lon"),
+            "temp_c": t_c,
+            "pressure_hpa": p_hpa,
+            "humidity_pct": h_pct,
+            "wind_mps": w_mps,
+            "gust_mps": g_mps,
+            "z_score": None
+        }
+
+        if z_now.size:
+            last_z = float(z_now[-1])
+            if abs(last_z) >= ZTH:
+                ctx["z_score"] = last_z
+                _emit_alert(f"Temperature anomaly |z|≥{ZTH} (z={last_z:.2f})", ctx)
+
+        if self.last_pressure is not None and p_hpa == p_hpa:
+            drop = self.last_pressure - p_hpa
+            if drop >= ALERT_PRESS_DROP:
+                _emit_alert(f"Pressure drop ≥{ALERT_PRESS_DROP} hPa (Δ={drop:.1f})", ctx)
+        self.last_pressure = p_hpa
+
+        if g_mps >= ALERT_WIND_GUST:
+            _emit_alert(f"Wind gust ≥{ALERT_WIND_GUST} m/s (gust={g_mps:.2f})", ctx)
+
+        # log first record immediately, then every 10th
+        if not self.first_logged:
+            log.info("FIRST %s | provider=%s | temp=%.1f°F p=%.1f hPa hum=%.0f%% wind=%.2f m/s",
+                     obj.get("ts_iso"), obj.get("provider", "n/a"),
+                     self.temps_f[-1], self.press[-1], h_pct, w_mps)
+            self.first_logged = True
+        elif n % 10 == 0:
+            log.info("%s | provider=%s | temp=%.1f°F p=%.1f hPa hum=%.0f%% wind=%.2f m/s",
+                     obj.get("ts_iso"), obj.get("provider", "n/a"),
+                     self.temps_f[-1], self.press[-1], h_pct, w_mps)
+
+    def _redraw(self):
+        if not self.times:
             return
-        xs = np.arange(len(times))
-        t_arr_f = np.array(temps_f, dtype=float)
-        p_arr = np.array(press, dtype=float)
+        xs = date2num(list(self.times))
+        t_arr_f = np.array(self.temps_f, dtype=float)
+        p_arr = np.array(self.press, dtype=float)
 
-        line_t.set_data(xs, t_arr_f)
-        line_p.set_data(xs, p_arr)
+        self.line_t.set_data(xs, t_arr_f)
+        self.line_p.set_data(xs, p_arr)
 
-        ax1.set_xlim(0, max(10, len(xs) - 1))
+        # x-limits: pad a bit so labels have room
+        xmin, xmax = xs.min(), xs.max()
+        pad = (xmax - xmin) * 0.05 if xmax > xmin else 0.001
+        self.ax1.set_xlim(xmin - pad, xmax + pad)
+
         if t_arr_f.size:
-            ax1.set_ylim(t_arr_f.min() - 2.0, t_arr_f.max() + 2.0)
+            self.ax1.set_ylim(t_arr_f.min() - 2.0, t_arr_f.max() + 2.0)
         if p_arr.size:
-            ax2.set_ylim(p_arr.min() - 1.5, p_arr.max() + 1.5)
+            self.ax2.set_ylim(p_arr.min() - 1.5, p_arr.max() + 1.5)
 
+        # anomalies on °C
         if t_arr_f.size:
             t_arr_c = (t_arr_f - 32.0) * 5.0/9.0
             z = zscores(t_arr_c)
             mask = np.abs(z) >= ZTH
-            scat.set_offsets(np.c_[xs[mask], t_arr_f[mask]])
+            self.scat.set_offsets(np.c_[xs[mask], t_arr_f[mask]])
         else:
-            scat.set_offsets([])
+            self.scat.set_offsets([])
 
-        fig.canvas.draw_idle()
-        fig.canvas.flush_events()
+        self.ax1.set_title(f"Temp & Pressure (|z|≥{ZTH})", pad=10)
 
-    source_iter = _kafka_stream(cons) if cons else _tail_jsonl(INFILE)
-    last_pressure: float | None = None
-    first = True
-
-    try:
-        for obj in source_iter:
+    # called by FuncAnimation on the GUI thread
+    def _on_timer(self, _frame):
+        # drain queue quickly to keep UI responsive
+        processed = 0
+        while processed < 200:
             try:
-                append_jsonl(CONSUMER_DB, obj)
-            except Exception as e:
-                log.warning("Failed to append consumer row: %s", e)
+                obj = self.q.get_nowait()
+            except queue.Empty:
+                break
+            self._process_one(obj)
+            processed += 1
 
-            try:
-                ts = datetime.strptime(obj["ts_iso"], "%Y-%m-%dT%H:%M:%SZ")
-            except Exception:
-                ts = datetime.fromisoformat(obj["ts_iso"].replace("Z", "+00:00")).replace(tzinfo=None)
-            times.append(ts)
+        self._redraw()
+        return []
 
-            t_c = float(obj.get("temp_c", np.nan))
-            p_hpa = float(obj.get("pressure_hpa", np.nan))
-            h_pct = float(obj.get("humidity_pct", 60.0))
-            w_mps = float(obj.get("wind_mps", 3.0))
-            g_mps = float(obj.get("gust_mps", 0.0))
-
-            temps_f.append(_c_to_f(t_c))
-            press.append(p_hpa)
-
-            dp_f = _c_to_f(dew_point_c(t_c, h_pct))
-            wc_f = _c_to_f(wind_chill_c(t_c, w_mps))
-
-            n = len(temps_f)
-            t_arr_c_now = (np.array(temps_f, dtype=float) - 32.0) * 5.0/9.0
-            z_now = zscores(t_arr_c_now) if n else np.array([])
-            anomalies = int((np.abs(z_now) >= ZTH).sum()) if z_now.size else 0
-
-            ax1._metrics_box.set_text(
-                f"n={n} | anomalies={anomalies} • dew≈{dp_f:.1f}°F • wind chill≈{wc_f:.1f}°F"
-            )
-
-            ctx = {
-                "ts_iso": obj.get("ts_iso"),
-                "provider": obj.get("provider"),
-                "lat": obj.get("lat"),
-                "lon": obj.get("lon"),
-                "temp_c": t_c,
-                "pressure_hpa": p_hpa,
-                "humidity_pct": h_pct,
-                "wind_mps": w_mps,
-                "gust_mps": g_mps,
-                "z_score": None
-            }
-
-            if z_now.size:
-                last_z = float(z_now[-1])
-                if abs(last_z) >= ZTH:
-                    ctx["z_score"] = last_z
-                    _emit_alert(f"Temperature anomaly |z|≥{ZTH} (z={last_z:.2f})", ctx)
-
-            if last_pressure is not None and p_hpa == p_hpa:
-                drop = last_pressure - p_hpa
-                if drop >= ALERT_PRESS_DROP:
-                    _emit_alert(f"Pressure drop ≥{ALERT_PRESS_DROP} hPa (Δ={drop:.1f})", ctx)
-            last_pressure = p_hpa
-
-            if g_mps >= ALERT_WIND_GUST:
-                _emit_alert(f"Wind gust ≥{ALERT_WIND_GUST} m/s (gust={g_mps:.2f})", ctx)
-
-            # Always log first record immediately
-            if first:
-                log.info("FIRST RECORD %s | provider=%s | temp=%.1f°F p=%.1f hPa hum=%.0f%% wind=%.2f m/s",
-                         obj.get("ts_iso"), obj.get("provider", "n/a"),
-                         temps_f[-1], press[-1], h_pct, w_mps)
-                first = False
-            elif n % 10 == 0:
-                log.info("%s | provider=%s | temp=%.1f°F p=%.1f hPa hum=%.0f%% wind=%.2f m/s",
-                         obj.get("ts_iso"), obj.get("provider", "n/a"),
-                         temps_f[-1], press[-1], h_pct, w_mps)
-
-            redraw()
-
-    except KeyboardInterrupt:
-        log.info("Consumer stopped by user.")
-    finally:
+    def run(self):
         try:
-            plt.ioff()
-            plt.show(block=False)
-        except Exception:
+            plt.show(block=True)
+        except KeyboardInterrupt:
             pass
-        if cons:
-            try: cons.close()
-            except: pass
+        finally:
+            self.running = False
+            if self.cons:
+                try: self.cons.close()
+                except: pass
+
+# --- Entrypoint ---
+def main():
+    app = ConsumerApp()
+    app.run()
 
 if __name__ == "__main__":
     main()
