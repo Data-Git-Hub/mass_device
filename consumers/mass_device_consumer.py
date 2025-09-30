@@ -2,6 +2,7 @@
 from __future__ import annotations
 import os, json, time, pathlib, collections, sys
 from datetime import datetime
+from typing import Dict, Any
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -14,6 +15,15 @@ if str(_root) not in sys.path:
 from meteorological_theories.demo_calc import (
     zscores, ewma, cusum, dew_point_c, heat_index_c, wind_chill_c
 )
+from utils.utils_jsondb import append_jsonl
+from utils.utils_jsondb import ensure_parent
+
+# Optional: email/SMS hooks (no-op if not configured)
+try:
+    from consumers.mass_device_alerts import maybe_send_alert
+except Exception:
+    def maybe_send_alert(_alert: Dict[str, Any]) -> None:
+        pass
 
 def _c_to_f(c: float) -> float:
     return (c * 9.0/5.0) + 32.0
@@ -53,10 +63,19 @@ INFILE = pathlib.Path("data/demo_stream.jsonl")
 
 WINDOW = int(os.getenv("WINDOW_POINTS", "180"))
 ZTH = float(os.getenv("Z_THRESHOLD", "2.0"))
+ALERTS_ENABLED = os.getenv("ALERTS_ENABLED", "false").lower() == "true"
+ALERT_PRESS_DROP = float(os.getenv("ALERT_PRESSURE_DROP_HPA", "3"))
+ALERT_WIND_GUST = float(os.getenv("ALERT_WIND_GUST_MPS", "15"))
+
+# --- JSON database ---
+JSON_DB_DIR = pathlib.Path("data/db")
+CONSUMER_DB = JSON_DB_DIR / "consumer_stream.jsonl"   # every message the consumer processes
+ALERTS_DB   = JSON_DB_DIR / "alerts.jsonl"            # anomalies / alerts table
+ensure_parent(CONSUMER_DB)
+ensure_parent(ALERTS_DB)
 
 # --- Kafka wiring ---
 def _maybe_kafka_consumer():
-    """Return a KafkaConsumer or None. No consumer_timeout_ms => we will poll manually."""
     if not BOOTSTRAP:
         return None
     try:
@@ -68,7 +87,6 @@ def _maybe_kafka_consumer():
             auto_offset_reset="latest",
             enable_auto_commit=True,
             group_id=os.getenv("KAFKA_GROUP_ID", "mass_device"),
-            # NOTE: do NOT set consumer_timeout_ms; we will poll() in a loop
         )
         return cons
     except Exception as e:
@@ -76,7 +94,6 @@ def _maybe_kafka_consumer():
         return None
 
 def _kafka_stream(consumer):
-    """Infinite generator that polls Kafka and yields messages as they arrive."""
     while True:
         try:
             records = consumer.poll(timeout_ms=1000)
@@ -85,17 +102,16 @@ def _kafka_stream(consumer):
                     for m in msgs:
                         yield m.value
             else:
-                time.sleep(0.1)  # back off when no data
+                time.sleep(0.1)
         except Exception as e:
             log.error("Kafka poll error: %s", e)
             time.sleep(1.0)
 
-# --- File tail fallback ---
 def _tail_jsonl(path: pathlib.Path):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.touch(exist_ok=True)
     with path.open("r", encoding="utf-8") as f:
-        f.seek(0, 2)  # seek to end
+        f.seek(0, 2)
         while True:
             line = f.readline()
             if not line:
@@ -105,6 +121,39 @@ def _tail_jsonl(path: pathlib.Path):
                 yield json.loads(line)
             except json.JSONDecodeError:
                 continue
+
+# --- Alert helpers ---
+def _emit_alert(reason: str, ctx: Dict[str, Any]) -> None:
+    """Persist alert row; optionally send email/SMS."""
+    alert = {
+        "ts_iso": ctx.get("ts_iso"),
+        "reason": reason,
+        "provider": ctx.get("provider"),
+        "lat": ctx.get("lat"),
+        "lon": ctx.get("lon"),
+        "temp_c": ctx.get("temp_c"),
+        "pressure_hpa": ctx.get("pressure_hpa"),
+        "humidity_pct": ctx.get("humidity_pct"),
+        "wind_mps": ctx.get("wind_mps"),
+        "gust_mps": ctx.get("gust_mps"),
+        "z_score": ctx.get("z_score"),           # may be None except anomaly case
+        "thresholds": {
+            "ZTH": ZTH,
+            "ALERT_PRESSURE_DROP_HPA": ALERT_PRESS_DROP,
+            "ALERT_WIND_GUST_MPS": ALERT_WIND_GUST,
+        }
+    }
+    append_jsonl(ALERTS_DB, alert)
+    log.warning("ALERT: %s | t=%.1f°C p=%.1f hPa wind=%.2f m/s gust=%.2f m/s",
+                reason, ctx.get("temp_c", float("nan")),
+                ctx.get("pressure_hpa", float("nan")),
+                ctx.get("wind_mps", float("nan")),
+                ctx.get("gust_mps", float("nan")))
+    if ALERTS_ENABLED:
+        try:
+            maybe_send_alert(alert)  # email/SMS if configured
+        except Exception as e:
+            log.error("Alert send failed: %s", e)
 
 # --- Main ---
 def main():
@@ -160,7 +209,7 @@ def main():
         if p_arr.size:
             ax2.set_ylim(p_arr.min() - 1.5, p_arr.max() + 1.5)
 
-        # Anomalies on °C (scale-invariant but semantically clean)
+        # Anomalies on °C (scale-invariant)
         if t_arr_f.size:
             t_arr_c = (t_arr_f - 32.0) * 5.0/9.0
             z = zscores(t_arr_c)
@@ -170,40 +219,43 @@ def main():
             mask = np.zeros(0, dtype=bool)
 
         ax1.set_title(f"Temp & Pressure (|z|≥{ZTH})", pad=10)
-
-        # Metrics text will be set in the stream loop
         fig.canvas.draw_idle()
         plt.pause(0.05)
 
-    # --- Choose source ---
-    if cons:
-        source_iter = _kafka_stream(cons)
-    else:
-        source_iter = _tail_jsonl(INFILE)
+    source_iter = _kafka_stream(cons) if cons else _tail_jsonl(INFILE)
+
+    last_pressure: float | None = None
 
     try:
         for obj in source_iter:
-            # Parse timestamp
+            # Persist exactly what the consumer processed
+            try:
+                append_jsonl(CONSUMER_DB, obj)  # store every consumed message
+            except Exception as e:
+                log.warning("Failed to append consumer row: %s", e)
+
+            # Parse timestamp for plotting axis labels
             try:
                 ts = datetime.strptime(obj["ts_iso"], "%Y-%m-%dT%H:%M:%SZ")
             except Exception:
                 ts = datetime.fromisoformat(obj["ts_iso"].replace("Z", "+00:00")).replace(tzinfo=None)
             times.append(ts)
 
-            # Append series values
-            t_c = float(obj["temp_c"])
+            # Series values
+            t_c = float(obj.get("temp_c", np.nan))
+            p_hpa = float(obj.get("pressure_hpa", np.nan))
+            h_pct = float(obj.get("humidity_pct", 60.0))
+            w_mps = float(obj.get("wind_mps", 3.0))
+            g_mps = float(obj.get("gust_mps", 0.0))
+
             temps_f.append(_c_to_f(t_c))
-            press.append(float(obj.get("pressure_hpa", np.nan)))
+            press.append(p_hpa)
 
-            # Real humidity/wind if present; else safe defaults
-            hum = float(obj.get("humidity_pct", 60.0))
-            wind = float(obj.get("wind_mps", 3.0))
+            # Derived metrics for HUD (not persisted as alerts unless triggered)
+            dp_f = _c_to_f(dew_point_c(t_c, h_pct))
+            wc_f = _c_to_f(wind_chill_c(t_c, w_mps))
 
-            # Derived metrics (display in °F)
-            dp_f = _c_to_f(dew_point_c(t_c, hum))
-            wc_f = _c_to_f(wind_chill_c(t_c, wind))
-
-            # Recompute anomalies count for display
+            # Recompute anomalies for HUD
             n = len(temps_f)
             t_arr_c_now = (np.array(temps_f, dtype=float) - 32.0) * 5.0/9.0
             z_now = zscores(t_arr_c_now) if n else np.array([])
@@ -213,12 +265,43 @@ def main():
                 f"n={n} | anomalies={anomalies}  •  dew point≈{dp_f:.1f}°F  •  wind chill≈{wc_f:.1f}°F"
             )
 
+            # --- ALERT LOGIC ---
+            ctx = {
+                "ts_iso": obj.get("ts_iso"),
+                "provider": obj.get("provider"),
+                "lat": obj.get("lat"),
+                "lon": obj.get("lon"),
+                "temp_c": t_c,
+                "pressure_hpa": p_hpa,
+                "humidity_pct": h_pct,
+                "wind_mps": w_mps,
+                "gust_mps": g_mps,
+                "z_score": None
+            }
+
+            # (A) z-score anomaly on temperature (latest point)
+            if z_now.size:
+                last_z = float(z_now[-1])
+                if abs(last_z) >= ZTH:
+                    ctx["z_score"] = last_z
+                    _emit_alert(f"Temperature anomaly |z|≥{ZTH} (z={last_z:.2f})", ctx)
+
+            # (B) rapid pressure drop (compare sequential readings)
+            if last_pressure is not None and p_hpa == p_hpa:  # check not NaN
+                drop = last_pressure - p_hpa
+                if drop >= ALERT_PRESS_DROP:
+                    _emit_alert(f"Pressure drop ≥{ALERT_PRESS_DROP} hPa (Δ={drop:.1f})", ctx)
+            last_pressure = p_hpa
+
+            # (C) wind gust threshold
+            if g_mps >= ALERT_WIND_GUST:
+                _emit_alert(f"Wind gust ≥{ALERT_WIND_GUST} m/s (gust={g_mps:.2f})", ctx)
+
+            # Log every 10th update
             if n % 10 == 0:
-                log.info(
-                    "%s | provider=%s | temp=%.1f°F p=%.1f hPa hum=%.0f%% wind=%.2f m/s",
-                    obj.get("ts_iso"), obj.get("provider", "n/a"),
-                    temps_f[-1], press[-1], hum, wind
-                )
+                log.info("%s | provider=%s | temp=%.1f°F p=%.1f hPa hum=%.0f%% wind=%.2f m/s",
+                         obj.get("ts_iso"), obj.get("provider", "n/a"),
+                         temps_f[-1], press[-1], h_pct, w_mps)
 
             redraw()
 

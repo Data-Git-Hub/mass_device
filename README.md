@@ -367,6 +367,7 @@ Contributors names and contact info <br>
 ---
 
 ## Version History
+- P6 Main 5.0 | Add utils_jsondb.py;  Modify mass_device_producer.py, mass_device_consumer.py, README.md
 - P6 Main 4.7 | Modify mass_device_producer.py, .env - changed the refresh rate at 60 sec, README.md
 - P6 Main 4.6 | Modify mass_device_producer.py - Changed to emit more often, in lieu of every 5 minutes to actual, README.md
 - P6 Main 4.5 | Modify mass_device_producer.py - Changed def fetch_openweather to allow for the API key to work correctly, README.md

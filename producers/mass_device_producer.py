@@ -9,6 +9,7 @@ import requests
 from utils.utils_env import load_env, env
 from utils.utils_logger import get_logger
 from utils.kafka_io import get_producer
+from utils.utils_jsondb import append_jsonl, ensure_parent
 
 # --- Fallback demo generator (Keeps the producer always runs) ---
 from producers.demo_mass_device_producer import _synth_weather
@@ -23,25 +24,24 @@ POLL_SECONDS = float(env("POLL_SECONDS", "30", cast=float))
 PROVIDER = os.getenv("WEATHER_PROVIDER", "open-meteo").strip().lower()
 
 # --- Location (required for both providers) ---
-LAT = float(env("LOCATION_LAT", "39.7392", cast=float))   # default: Denver, CO
+LAT = float(env("LOCATION_LAT", "39.7392", cast=float))
 LON = float(env("LOCATION_LON", "-104.9903", cast=float))
 
 # --- OpenWeatherMap options (if you choose that provider) ---
 OWM_API_KEY = os.getenv("OPENWEATHER_API_KEY")  # keep in .env only!
 OWM_BASE = os.getenv("OPENWEATHER_BASE", "https://api.openweathermap.org/data/2.5/weather")
-OWM_UNITS = os.getenv("OPENWEATHER_UNITS", "metric")  # metric => temp in °C, wind in m/s
+OWM_UNITS = os.getenv("OPENWEATHER_UNITS", "metric")  # °C in 'metric', m/s wind
 
 # --- Filesystem fallback if Kafka is off ---
 FALLBACK_FILE = pathlib.Path("data/demo_stream.jsonl")
 FALLBACK_FILE.parent.mkdir(parents=True, exist_ok=True)
 
-# --- Normalizers ---
+# --- Local JSON 'tables' (append-only) ---
+JSON_DB_DIR = pathlib.Path("data/db")
+STREAM_DB = JSON_DB_DIR / "weather_stream.jsonl"   # every message the producer emits
 
+# --- Normalizers ---
 def _normalize_open_meteo(payload: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-    """
-    Open-Meteo current fields are under payload['current'] when requested with ?current=...
-    Docs: https://open-meteo.com/en/docs
-    """
     try:
         cur = payload["current"]
         msg = {
@@ -61,10 +61,6 @@ def _normalize_open_meteo(payload: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         return None
 
 def _normalize_openweather(payload: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-    """
-    OpenWeatherMap /weather normalization
-    Docs: https://openweathermap.org/current
-    """
     try:
         main = payload["main"]
         wind = payload.get("wind", {}) or {}
@@ -86,20 +82,15 @@ def _normalize_openweather(payload: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         return None
 
 # --- Fetchers ---
-
 def _fetch_open_meteo(lat: float, lon: float) -> Optional[Dict[str, Any]]:
     url = "https://api.open-meteo.com/v1/forecast"
     params = {
         "latitude": lat,
         "longitude": lon,
         "current": ",".join([
-            "temperature_2m",
-            "relative_humidity_2m",
-            "pressure_msl",
-            "wind_speed_10m",
-            "wind_gusts_10m"
+            "temperature_2m","relative_humidity_2m","pressure_msl",
+            "wind_speed_10m","wind_gusts_10m"
         ]),
-        # Can later add "precipitation", "rain", etc. if desired
         "timezone": "UTC"
     }
     try:
@@ -117,9 +108,11 @@ def _fetch_openweather(lat: float, lon: float) -> Optional[Dict[str, Any]]:
     params = {"lat": lat, "lon": lon, "appid": OWM_API_KEY, "units": OWM_UNITS}
     try:
         r = requests.get(OWM_BASE, params=params, timeout=10)
-        try: r.raise_for_status()
-        except Exception as e:
-            log.warning("OpenWeather HTTP %s | URL=%s | body=%s", r.status_code, r.url, r.text[:300])
+        try:
+            r.raise_for_status()
+        except Exception:
+            log.warning("OpenWeather HTTP %s | URL=%s | body=%s",
+                        r.status_code, r.url, r.text[:300])
             return None
         msg = _normalize_openweather(r.json())
         if msg and OWM_UNITS.lower() == "imperial":
@@ -132,25 +125,28 @@ def _fetch_openweather(lat: float, lon: float) -> Optional[Dict[str, Any]]:
 def _fetch_live() -> Optional[Dict[str, Any]]:
     if PROVIDER == "openweather":
         return _fetch_openweather(LAT, LON)
-    # default
     return _fetch_open_meteo(LAT, LON)
 
 # --- Main loop ---
-
 def main():
     prod = get_producer()
     log.info(
         "mass_device_producer start | Kafka=%s | topic=%s | provider=%s | lat=%.4f lon=%.4f",
         "ON" if prod else "OFF(file)", TOPIC, PROVIDER, LAT, LON
     )
+    ensure_parent(STREAM_DB)  # make sure data/db exists
+
     seq = 0
     try:
         while True:
-            # Try live first
-            msg = _fetch_live()
-            # If live fails, use synthetic so the pipeline keeps running
-            if not msg:
-                msg = _synth_weather(seq, time.time())
+            # Try live first; fallback to synthetic so pipeline keeps running
+            msg = _fetch_live() or _synth_weather(seq, time.time())
+
+            # ALWAYS persist locally to JSON DB (append-only “table”)
+            try:
+                append_jsonl(STREAM_DB, msg)   # <<< write one line per reading
+            except Exception as e:
+                log.warning("Failed to append to %s: %s", STREAM_DB, e)
 
             payload = json.dumps(msg).encode("utf-8")
 
