@@ -5,7 +5,7 @@ from datetime import datetime
 import numpy as np
 import matplotlib.pyplot as plt
 
-# --- ensure project root import path ---
+# --- Ensure project root import path ---
 from pathlib import Path as _Path
 _root = _Path(__file__).resolve().parents[1]
 if str(_root) not in sys.path:
@@ -54,29 +54,48 @@ INFILE = pathlib.Path("data/demo_stream.jsonl")
 WINDOW = int(os.getenv("WINDOW_POINTS", "180"))
 ZTH = float(os.getenv("Z_THRESHOLD", "2.0"))
 
+# --- Kafka wiring ---
 def _maybe_kafka_consumer():
+    """Return a KafkaConsumer or None. No consumer_timeout_ms => we will poll manually."""
     if not BOOTSTRAP:
         return None
     try:
         from kafka import KafkaConsumer
-        return KafkaConsumer(
+        cons = KafkaConsumer(
             TOPIC,
             bootstrap_servers=[s.strip() for s in BOOTSTRAP.split(",") if s.strip()],
             value_deserializer=lambda b: json.loads(b.decode("utf-8")),
             auto_offset_reset="latest",
             enable_auto_commit=True,
             group_id=os.getenv("KAFKA_GROUP_ID", "mass_device"),
-            consumer_timeout_ms=1000,
+            # NOTE: do NOT set consumer_timeout_ms; we will poll() in a loop
         )
+        return cons
     except Exception as e:
         log.warning("Kafka not available (%s). Falling back to file tail at %s", e, INFILE)
         return None
 
+def _kafka_stream(consumer):
+    """Infinite generator that polls Kafka and yields messages as they arrive."""
+    while True:
+        try:
+            records = consumer.poll(timeout_ms=1000)
+            if records:
+                for _tp, msgs in records.items():
+                    for m in msgs:
+                        yield m.value
+            else:
+                time.sleep(0.1)  # back off when no data
+        except Exception as e:
+            log.error("Kafka poll error: %s", e)
+            time.sleep(1.0)
+
+# --- File tail fallback ---
 def _tail_jsonl(path: pathlib.Path):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.touch(exist_ok=True)
     with path.open("r", encoding="utf-8") as f:
-        f.seek(0, 2)
+        f.seek(0, 2)  # seek to end
         while True:
             line = f.readline()
             if not line:
@@ -87,6 +106,7 @@ def _tail_jsonl(path: pathlib.Path):
             except json.JSONDecodeError:
                 continue
 
+# --- Main ---
 def main():
     cons = _maybe_kafka_consumer()
     log.info("Consumer start | Kafka=%s | topic=%s | window=%d | zth=%.2f",
@@ -140,7 +160,7 @@ def main():
         if p_arr.size:
             ax2.set_ylim(p_arr.min() - 1.5, p_arr.max() + 1.5)
 
-        # z-score on °C (scale-invariant, keeps semantics clean)
+        # Anomalies on °C (scale-invariant but semantically clean)
         if t_arr_f.size:
             t_arr_c = (t_arr_f - 32.0) * 5.0/9.0
             z = zscores(t_arr_c)
@@ -151,21 +171,18 @@ def main():
 
         ax1.set_title(f"Temp & Pressure (|z|≥{ZTH})", pad=10)
 
-        # metrics box updates in the main loop (we pass computed dp/wc there)
-
+        # Metrics text will be set in the stream loop
         fig.canvas.draw_idle()
         plt.pause(0.05)
 
-    def stream():
-        if cons:
-            for msg in cons:
-                yield msg.value
-        else:
-            for obj in _tail_jsonl(INFILE):
-                yield obj
+    # --- Choose source ---
+    if cons:
+        source_iter = _kafka_stream(cons)
+    else:
+        source_iter = _tail_jsonl(INFILE)
 
     try:
-        for obj in stream():
+        for obj in source_iter:
             # Parse timestamp
             try:
                 ts = datetime.strptime(obj["ts_iso"], "%Y-%m-%dT%H:%M:%SZ")
@@ -178,20 +195,20 @@ def main():
             temps_f.append(_c_to_f(t_c))
             press.append(float(obj.get("pressure_hpa", np.nan)))
 
-            # Use real humidity/wind if present, else safe defaults
+            # Real humidity/wind if present; else safe defaults
             hum = float(obj.get("humidity_pct", 60.0))
             wind = float(obj.get("wind_mps", 3.0))
 
-            # Derived metrics in °F for display
+            # Derived metrics (display in °F)
             dp_f = _c_to_f(dew_point_c(t_c, hum))
             wc_f = _c_to_f(wind_chill_c(t_c, wind))
 
-            # Update metrics box text
+            # Recompute anomalies count for display
             n = len(temps_f)
-            # recompute current anomaly count for display consistency
             t_arr_c_now = (np.array(temps_f, dtype=float) - 32.0) * 5.0/9.0
             z_now = zscores(t_arr_c_now) if n else np.array([])
             anomalies = int((np.abs(z_now) >= ZTH).sum()) if z_now.size else 0
+
             ax1._metrics_box.set_text(
                 f"n={n} | anomalies={anomalies}  •  dew point≈{dp_f:.1f}°F  •  wind chill≈{wc_f:.1f}°F"
             )

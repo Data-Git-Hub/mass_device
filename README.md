@@ -367,6 +367,7 @@ Contributors names and contact info <br>
 ---
 
 ## Version History
+- P6 Main 4.4 | Modify mass_device_consumer.py - corrected issues with Figure 1 disappearing
 - P6 Main 4.3 | Add .env - Add API key, Modify README.md
 - P6 Main 4.2 | Modify .env.example, README.md
 - P6 Main 4.1 | Modify mass_device_consumer.py - Add consume streaming data, README.md
