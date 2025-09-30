@@ -410,3 +410,4 @@ Contributors names and contact info <br>
 - P6 Test 3.1 | Test mass_device_producer.py, mass_device_consumer.py: TEST - SUCCESS need to check openweather API key
 - P6 Test 3.2 | Test mass_device_producer.py, mass_device_consumer.py: TEST - FAIL OpenWeatherMap API Key isn't activated, need to wait for API activation email
 - P6 Test 3.3 | Test mass_device_producer.py. mass_device_consumer.py: TEST - FAIL
+- P6 Test 3.4 | Test mass_device_producer.py. mass_device_consumer.py: TEST - FAIL Modifying refresh rate
