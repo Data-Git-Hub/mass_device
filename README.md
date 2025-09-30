@@ -367,9 +367,10 @@ Contributors names and contact info <br>
 ---
 
 ## Version History
-- P6 Main 4.6 | Modify mass_device_producer.py - Changed to emit more often, in lieu of every 5 minutes to actual, Modify README.md
-- P6 Main 4.5 | Modify mass_device_producer.py - Changed def fetch_openweather to allow for the API key to work correctly, Modify README.md
-- P6 Main 4.4 | Modify mass_device_consumer.py - Corrected issues with Figure 1 disappearing, Modify README.md
+- P6 Main 4.7 | Modify mass_device_producer.py, .env - changed the refresh rate at 60 sec, README.md
+- P6 Main 4.6 | Modify mass_device_producer.py - Changed to emit more often, in lieu of every 5 minutes to actual, README.md
+- P6 Main 4.5 | Modify mass_device_producer.py - Changed def fetch_openweather to allow for the API key to work correctly, README.md
+- P6 Main 4.4 | Modify mass_device_consumer.py - Corrected issues with Figure 1 disappearing, README.md
 - P6 Main 4.3 | Add .env - Add API key, Modify README.md
 - P6 Main 4.2 | Modify .env.example, README.md
 - P6 Main 4.1 | Modify mass_device_consumer.py - Add consume streaming data, README.md
