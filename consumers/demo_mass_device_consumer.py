@@ -1,11 +1,17 @@
 # consumers/demo_mass_device_consumer.py
 from __future__ import annotations
-import os, json, time, pathlib, collections
+import os, json, time, pathlib, collections, sys
 from datetime import datetime
 import numpy as np
 import matplotlib.pyplot as plt
 
-# >>> added: import formulas from the new package
+# --- ensure project root is importable (safe if already on sys.path) ---
+from pathlib import Path as _Path
+_root = _Path(__file__).resolve().parents[1]  # mass_device/
+if str(_root) not in sys.path:
+    sys.path.insert(0, str(_root))
+
+# --- formulas from your meteorological_theories package ---
 from meteorological_theories.demo_calc import (
     zscores,        # replaces local _zscores
     ewma,           # available for later use
@@ -19,7 +25,7 @@ from meteorological_theories.demo_calc import (
 def _c_to_f(c: float) -> float:
     return (c * 9.0/5.0) + 32.0
 
-# ---- Optional utils (fallback) ----
+# ---- Optional utils (fallback logger + .env loader) ----
 logger = None
 def _get_logger():
     global logger
@@ -88,73 +94,103 @@ def _tail_jsonl(path: pathlib.Path):
             except json.JSONDecodeError:
                 continue
 
-# >>> removed: local _zscores (now using imported zscores)
-# def _zscores(arr: np.ndarray):
-#     ...
-
 def main():
     cons = _maybe_kafka_consumer()
     log.info("Demo consumer start | Kafka=%s | topic=%s | window=%d | zth=%.2f",
              "ON" if cons else "OFF(file)", TOPIC, WINDOW, ZTH)
 
     times = collections.deque(maxlen=WINDOW)
-    temps = collections.deque(maxlen=WINDOW)
-    press = collections.deque(maxlen=WINDOW)
+    temps = collections.deque(maxlen=WINDOW)   # store °F
+    press = collections.deque(maxlen=WINDOW)   # store hPa
 
     plt.ion()
     fig, ax1 = plt.subplots(figsize=(9, 4.5))
     ax2 = ax1.twinx()
-    fig.suptitle("M.A.S.S. Device — Live Temp & Pressure with Anomalies", y=0.98)
-    fig.subplots_adjust(top=0.88)
-    line_t, = ax1.plot([], [], lw=1.7, label="Temp (°F)")    # was °C
+
+    # --- Title space & layout so nothing is squished ---
+    fig.suptitle("M.A.S.S. Device — Live Temp & Pressure with Anomalies", y=0.985)
+    fig.tight_layout(rect=(0, 0, 1, 0.93))
+
+    # Lines & scatter
+    line_t, = ax1.plot([], [], lw=1.7, label="Temp (°F)")
     line_p, = ax2.plot([], [], lw=1.0, alpha=0.75, label="Pressure (hPa)")
     scat = ax1.scatter([], [], s=28, marker="o", edgecolors="none", alpha=0.9)
+
+    # Axes labels/grid
     ax1.set_xlabel("Time (HH:MM:SS)")
-    ax1.set_ylabel("Temp (°F)")                              # was °C
+    ax1.set_ylabel("Temp (°F)")
     ax2.set_ylabel("Pressure (hPa)")
     ax1.grid(True, alpha=0.3)
-    fig.legend(loc="upper right")
+
+    # Single legend INSIDE the axes (lower-right)
+    handles1, labels1 = ax1.get_legend_handles_labels()
+    handles2, labels2 = ax2.get_legend_handles_labels()
+    legend = ax1.legend(
+        handles1 + handles2,
+        labels1 + labels2,
+        loc="lower right",
+        bbox_to_anchor=(0.985, 0.02),  # near bottom-right inside axes
+        borderaxespad=0.6,
+        framealpha=0.9
+    )
+
+    # Create a metrics textbox once; update its text on each redraw
+    ax1._metrics_box = ax1.text(
+        0.01, 0.98, "",
+        transform=ax1.transAxes,
+        ha="left", va="top",
+        fontsize=9,
+        bbox=dict(boxstyle="round,pad=0.3", fc="white", ec="0.8", alpha=0.75)
+    )
 
     def redraw():
         if not times:
             return
+
         xlabels = [t.strftime("%H:%M:%S") for t in times]
-        t_arr = np.array(temps, dtype=float)
-        p_arr = np.array(press, dtype=float)
+        t_arr = np.array(temps, dtype=float)   # °F
+        p_arr = np.array(press, dtype=float)   # hPa
 
         # update lines
-        line_t.set_data(range(len(xlabels)), t_arr)
-        line_p.set_data(range(len(xlabels)), p_arr)
+        xs = np.arange(len(xlabels))
+        line_t.set_data(xs, t_arr)
+        line_p.set_data(xs, p_arr)
 
         # autoscale
-        ax1.set_xlim(0, max(10, len(xlabels)-1))
-        ax1.set_ylim(t_arr.min()-1.5, t_arr.max()+1.5)
-        ax2.set_ylim(p_arr.min()-1.5, p_arr.max()+1.5)
+        ax1.set_xlim(0, max(10, len(xs) - 1))
+        if t_arr.size:
+            ax1.set_ylim(t_arr.min() - 2.0, t_arr.max() + 2.0)
+        if p_arr.size:
+            ax2.set_ylim(p_arr.min() - 1.5, p_arr.max() + 1.5)
 
-        # anomalies (z-score on temp) using imported zscores
-        z = zscores(t_arr)  # >>> changed
-        mask = np.abs(z) >= ZTH
-        xs = np.where(mask)[0]
-        ys = t_arr[mask]
-        scat.set_offsets(np.c_[xs, ys])
+        # anomalies (z-score on temperature) — scale-invariant
+        # for correctness use °C in z-score; convert back from °F:
+        if t_arr.size:
+            t_arr_c = (t_arr - 32.0) * 5.0/9.0
+            z = zscores(t_arr_c)
+            mask = np.abs(z) >= ZTH
+            scat.set_offsets(np.c_[xs[mask], t_arr[mask]])
+        else:
+            mask = np.zeros(0, dtype=bool)
 
-        # >>> optional: compute a derived metric and show it subtly
+        # Short, clear axes title (no long strings that wrap)
+        ax1.set_title(f"Temp & Pressure (|z|≥{ZTH})", pad=10)
+
+        # Metrics box (compact summary)
         try:
-            # pick the latest sample to annotate
-            latest_t = float(t_arr[-1])
-            latest_p = float(p_arr[-1])
-            # if humidity/wind available in stream, you can pass real values here
-            # demo: assume 60% RH and 3 m/s wind for an illustrative annotation
-            dp_f = _c_to_f(dew_point_c(latest_t, 60.0))
-            wc_f = _c_to_f(wind_chill_c(latest_t, 3.0))
-            ax1.set_title(
-                f"Temp & Pressure | n={len(t_arr)} | anomalies={mask.sum()} (|z|≥{ZTH}) "
-                f"| dew point≈{dp_f:.1f}°F, wind chill≈{wc_f:.1f}°F",
-                pad=14
-            )
-
+            if t_arr.size:
+                latest_t_f = float(t_arr[-1])
+                latest_t_c = (latest_t_f - 32.0) * 5.0/9.0
+                dp_f = _c_to_f(dew_point_c(latest_t_c, 60.0))   # replace 60.0 with obj["humidity_pct"] when available
+                wc_f = _c_to_f(wind_chill_c(latest_t_c, 3.0))   # replace 3.0 with obj["wind_mps"] when available
+                ax1._metrics_box.set_text(
+                    f"n={len(t_arr)} | anomalies={int(mask.sum())}  •  "
+                    f"dew point≈{dp_f:.1f}°F  •  wind chill≈{wc_f:.1f}°F"
+                )
+            else:
+                ax1._metrics_box.set_text("n=0 | anomalies=0")
         except Exception:
-            ax1.set_title(f"Temp & Pressure | n={len(t_arr)} | anomalies={mask.sum()} (|z|≥{ZTH})")
+            ax1._metrics_box.set_text(f"n={len(t_arr)} | anomalies={int(mask.sum())}")
 
         fig.canvas.draw_idle()
         plt.pause(0.05)
@@ -169,17 +205,21 @@ def main():
 
     try:
         for obj in stream():
+            # tolerant timestamp parsing
             try:
                 ts = datetime.strptime(obj["ts_iso"], "%Y-%m-%dT%H:%M:%SZ")
             except Exception:
-                # tolerate slightly different formats
                 ts = datetime.fromisoformat(obj["ts_iso"].replace("Z", "+00:00")).replace(tzinfo=None)
+
             times.append(ts)
-            temps.append(_c_to_f(float(obj["temp_c"])))     # convert on ingest
-            press.append(float(obj["pressure_hpa"]))
+            temps.append(_c_to_f(float(obj["temp_c"])))      # store °F
+            press.append(float(obj["pressure_hpa"]))          # store hPa
+
             if len(times) % 10 == 0:
-                log.info("%s | temp=%.2f°C p=%.1f hPa", obj["ts_iso"], obj["temp_c"], obj["pressure_hpa"])
+                log.info("%s | temp=%.1f°F p=%.1f hPa", obj["ts_iso"], temps[-1], press[-1])
+
             redraw()
+
     except KeyboardInterrupt:
         log.info("Demo consumer stopped by user.")
     finally:
@@ -189,8 +229,10 @@ def main():
         except Exception:
             pass
         if cons:
-            try: cons.close()
-            except: pass
+            try:
+                cons.close()
+            except Exception:
+                pass
 
 if __name__ == "__main__":
     main()
