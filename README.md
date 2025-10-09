@@ -410,6 +410,7 @@ Contributors names and contact info <br>
 ---
 
 ## Version History
+- P6 Main 8.0 | Modify mass_device_alerts.py - made changes to include SMS alert messaging, README.md 
 - P6 Finl 7.1 | Add 7.4.F.png; Modify README.md
 - P6 Finl 7.0 | Modify README.md
 - P6 Main 6.4 | Modify mass_device_consumer.py - change parameters of Figure 1 to include all axes titles, README.md
@@ -474,4 +475,4 @@ Contributors names and contact info <br>
 ## Final Notes
 - Keys live only in .env (.gitignore)
 - The `consumer` logs FIRST... immediately when the first record arrives as a validity check
-- Time on teh X-axis is `local timezone` (incoming timestamps are UTC and converted)
+- Time on the X-axis is `local timezone` (incoming timestamps are UTC and converted)
