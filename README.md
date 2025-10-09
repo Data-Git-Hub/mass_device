@@ -410,6 +410,7 @@ Contributors names and contact info <br>
 ---
 
 ## Version History
+- P6 Main 8.1 | Modify mass_device_alerts.py - decreased character size of SMS message, README.md
 - P6 Main 8.0 | Modify mass_device_alerts.py - made changes to include SMS alert messaging, README.md 
 - P6 Finl 7.1 | Add 7.4.F.png; Modify README.md
 - P6 Finl 7.0 | Modify README.md
